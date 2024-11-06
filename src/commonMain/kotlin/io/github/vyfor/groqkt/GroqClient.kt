@@ -73,16 +73,13 @@ class GroqClient(
         }
       }
     }
-  }
-) : AutoCloseable {
-  init {
-    client.config {
-      defaultRequest {
-        url(BASE_URL)
-        header("Authorization", "Bearer $apiKey")
-      }
+    
+    install(DefaultRequest) {
+      url(BASE_URL)
+      header("Authorization", "Bearer $apiKey")
     }
   }
+) : AutoCloseable {
   
   /**
    * Create a model response for the given chat conversation.
@@ -98,6 +95,22 @@ class GroqClient(
     .parse<ChatCompletion>()
   
   /**
+   * Create a model response for the given chat conversation.
+   *
+   * @param block The chat completion request
+   * @return Result<GroqResponse<ChatCompletion>>
+   */
+  suspend fun chat(block: ChatCompletionRequest.Builder.() -> Unit) = client
+    .post(ChatCompletionRequest.ENDPOINT) {
+      contentType(ContentType.Application.Json)
+      setBody(ChatCompletionRequest.Builder().apply {
+        block()
+        stream = false
+      })
+    }
+    .parse<ChatCompletion>()
+  
+  /**
    * Stream a model response for the given chat conversation.
    *
    * @param data The chat completion request
@@ -108,6 +121,31 @@ class GroqClient(
       .post(ChatCompletionRequest.ENDPOINT) {
         contentType(ContentType.Application.Json)
         setBody(data.apply { stream = true })
+      }
+      .bodyAsChannel()
+      .apply {
+        while (!isClosedForRead) {
+          val line = readUTF8Line() ?: break
+          val chunk = Json.decodeFromString<StreamingChatCompletion>(line)
+          emit(chunk)
+        }
+      }
+  }.flowOn(Dispatchers.IO)
+  
+  /**
+   * Stream a model response for the given chat conversation.
+   *
+   * @param block The chat completion request
+   * @return Result<GroqResponse<ChatCompletion>>
+   */
+  suspend fun chatStreaming(block: ChatCompletionRequest.Builder.() -> Unit) = flow {
+    client
+      .post(ChatCompletionRequest.ENDPOINT) {
+        contentType(ContentType.Application.Json)
+        setBody(ChatCompletionRequest.Builder().apply {
+          block()
+          stream = true
+        })
       }
       .bodyAsChannel()
       .apply {
