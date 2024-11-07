@@ -88,8 +88,8 @@ data class AudioTranslationRequest(
     
     fun build(): AudioTranslationRequest {
       return AudioTranslationRequest(
-        requireNotNull(file),
-        requireNotNull(model),
+        requireNotNull(file) { "file must be set" },
+        requireNotNull(model) { "model must be set" },
         prompt,
         responseFormat,
         temperature,

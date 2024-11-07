@@ -101,9 +101,9 @@ data class AudioTranscriptionRequest(
     
     fun build(): AudioTranscriptionRequest {
       return AudioTranscriptionRequest(
-        requireNotNull(file),
+        requireNotNull(file) { "file must be set" },
         language,
-        requireNotNull(model),
+        requireNotNull(model) { "model must be set" },
         prompt,
         responseFormat,
         temperature,
