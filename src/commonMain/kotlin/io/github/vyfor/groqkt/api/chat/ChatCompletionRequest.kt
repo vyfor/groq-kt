@@ -134,8 +134,8 @@ data class ChatCompletionRequest(
       functionCall = CompletionFunctionCallType.Call(name)
     }
     
-    fun function(block: CompletionFunction.Builder.() -> Unit) {
-      CompletionFunction.Builder().apply(block).build().apply {
+    fun function(name: String, block: CompletionFunction.Builder.() -> Unit) {
+      CompletionFunction.Builder(name).apply(block).build().apply {
         functions?.add(this) ?: run {
           functions = mutableListOf(this)
         }
@@ -150,8 +150,8 @@ data class ChatCompletionRequest(
       stop = sequences.toMutableList()
     }
     
-    fun tool(tool: CompletionFunction.Builder.() -> Unit) {
-      CompletionTool(CompletionFunction.Builder().apply(tool).build()).apply {
+    fun tool(name: String, tool: CompletionFunction.Builder.() -> Unit) {
+      CompletionTool(CompletionFunction.Builder(name).apply(tool).build()).apply {
         tools?.add(this) ?: run {
           tools = mutableListOf(this)
         }
@@ -262,16 +262,24 @@ data class CompletionFunction(
   val parameters: JsonObject? = null,
 ) {
   init {
-    require(name.length <= 64) { "Function name must be <= 64" }
+    require(name.length <= 64) { "function name must be <= 64" }
   }
   
+  /**
+   * A function that can be called by the model.
+   *
+   * @property name The name of the function to be called. Must be a-z, A-Z, 0-9, or contain underscores and dashes, with a maximum length of 64.
+   * @property description A description of what the function does, used by the model to choose when and how to call the function.
+   * @property parameters The parameters the functions accepts, described as a JSON Schema object. See the docs on tool use for examples, and the JSON Schema reference for documentation about the format.
+   *
+   * @sample io.github.vyfor.groqkt.api.chat.CompletionFunction.exampleGroqFunction
+   */
   @GroqDsl
-  class Builder {
-    var name: String? = null
+  class Builder(var name: String) {
     var description: String? = null
     var parameters: JsonObject? = null
     
-    fun build() = CompletionFunction(requireNotNull(name) { "function name is required" }, description, parameters)
+    fun build() = CompletionFunction(name, description, parameters)
   }
   
   companion object {
