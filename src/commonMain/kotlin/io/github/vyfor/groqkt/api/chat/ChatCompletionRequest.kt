@@ -90,7 +90,7 @@ data class ChatCompletionRequest(
    * @property parallelToolCalls Whether to enable parallel function calling during tool use.
    * @property presencePenalty Number between -2.0 and 2.0. Positive values penalize new tokens based on whether they appear in the text so far, increasing the model's likelihood to talk about new topics.
    * @property responseFormat The format in which the response should be returned. When using JSON mode, you must also instruct the model to produce JSON yourself via a system or user message.
-   * @property seed If specified, our system will make the best effort to sample deterministically, such that repeated requests with the same seed and parameters should return the same result. Determinism is not guaranteed, and you should refer to the `system_fingerprint` response parameter to monitor changes in the backend. TODO system_fingerprint
+   * @property seed If specified, our system will make the best effort to sample deterministically, such that repeated requests with the same seed and parameters should return the same result. Determinism is not guaranteed, and you should refer to the `system_fingerprint` response parameter to monitor changes in the backend.
    * @property stop Up to 4 sequences where the API will stop generating further tokens. The returned text will not contain the stop sequence.
    * @property stream If set, partial message deltas will be sent.
    * @property streamOptions Options for streaming response. Only set this when you set [stream] to true.
@@ -506,12 +506,13 @@ data class UserMessageText(
 /**
  * The image content of a user message.
  *
- * @param imageUrl
+ * @param image The [Image] object.
  * @param type The type of the content part.
  */
 @Serializable
 data class UserMessageImage(
-  val imageUrl: Image? = null,
+  @SerialName("image_url")
+  val image: Image? = null,
   val type: String? = "image_url",
 ) {
   /**
