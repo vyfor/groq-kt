@@ -31,10 +31,7 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonNamingStrategy
-import kotlinx.serialization.json.JsonPrimitive
-import kotlinx.serialization.json.buildJsonArray
+import kotlinx.serialization.json.*
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.minutes
@@ -126,7 +123,7 @@ class GroqClient(
     }.run {
       GroqStreamingResponse(
         parseHeaders(),
-        flow<Result<StreamingChatCompletion>> {
+        flow {
           bodyAsChannel().apply {
             while (!isClosedForRead) {
               val line = readUTF8Line()?.removePrefix("data: ")?.takeIf { it.startsWith("{") } ?: continue
@@ -154,7 +151,7 @@ class GroqClient(
     }.run {
       GroqStreamingResponse(
         parseHeaders(),
-        flow<Result<StreamingChatCompletion>> {
+        flow {
           bodyAsChannel().apply {
             while (!isClosedForRead) {
               val line = readUTF8Line()?.removePrefix("data: ")?.takeIf { it.startsWith("{") } ?: continue
@@ -319,6 +316,7 @@ class GroqClient(
       encodeDefaults = true
       ignoreUnknownKeys = true
       namingStrategy = JsonNamingStrategy.SnakeCase
+      classDiscriminatorMode = ClassDiscriminatorMode.NONE
     }
     
     private suspend inline fun <reified T> HttpResponse.validate(): Result<T> {

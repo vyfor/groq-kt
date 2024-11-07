@@ -190,8 +190,8 @@ class ChatCompletionMessageBuilder {
   
   fun system(content: String, name: String? = null) { messages.add(CompletionMessage.System(content, name)) }
   fun text(content: String) { messages.add(CompletionMessage.User(UserMessageType.Text(content))) }
-  fun image(image: String) { messages.add(CompletionMessage.User(UserMessageType.Array(imageContent = UserMessageImage(UserMessageImage.Image(url = image))))) }
-  fun user(content: String?, image: String?, name: String? = null) { messages.add(CompletionMessage.User(UserMessageType.Array(UserMessageText(content), UserMessageImage(UserMessageImage.Image(url = image))), name)) }
+  fun image(image: String) { messages.add(CompletionMessage.User(UserMessageType.Array(imageContent = UserMessageContent.Image(UserMessageContent.Image.ImageObject(url = image))))) }
+  fun user(content: String?, image: String?, name: String? = null) { messages.add(CompletionMessage.User(UserMessageType.Array(UserMessageContent.Text(content), UserMessageContent.Image(UserMessageContent.Image.ImageObject(url = image))), name)) }
   fun assistant(content: String, name: String? = null, functionCall: CompletionFunctionCall? = null, toolCalls: List<CompletionToolCall>? = null) { messages.add(CompletionMessage.Assistant(content, functionCall, name, toolCalls)) }
   fun tool(content: String, toolCallId: String) { messages.add(CompletionMessage.Tool(content, toolCallId)) }
   @Deprecated("Deprecated in the Groq API", ReplaceWith("tool"))
@@ -385,8 +385,8 @@ sealed class CompletionMessage(val role: String) {
   
   fun system(content: String, name: String? = null) = System(content, name)
   fun text(content: String) = User(UserMessageType.Text(content))
-  fun image(image: String) = User(UserMessageType.Array(imageContent = UserMessageImage(UserMessageImage.Image(url = image))))
-  fun user(content: String?, image: String?, name: String? = null) = User(UserMessageType.Array(UserMessageText(content), UserMessageImage(UserMessageImage.Image(url = image))), name)
+  fun image(image: String) = User(UserMessageType.Array(imageContent = UserMessageContent.Image(UserMessageContent.Image.ImageObject(url = image))))
+  fun user(content: String?, image: String?, name: String? = null) = User(UserMessageType.Array(UserMessageContent.Text(content), UserMessageContent.Image(UserMessageContent.Image.ImageObject(url = image))), name)
   fun assistant(content: String, name: String? = null, functionCall: CompletionFunctionCall? = null, toolCalls: List<CompletionToolCall>? = null) = Assistant(content, functionCall, name, toolCalls)
   fun tool(content: String, toolCallId: String) = Tool(content, toolCallId)
   @Deprecated("Deprecated in the Groq API", ReplaceWith("tool"))
@@ -401,13 +401,13 @@ sealed class CompletionMessage(val role: String) {
       element<String>("toolCallId")
       element<String>("functionName")
       element<String>("toolName")
-      element<UserMessageText>("textContent")
-      element<UserMessageImage>("imageContent")
+      element<UserMessageContent.Text>("textContent")
+      element<UserMessageContent.Image>("imageContent")
       element<CompletionFunctionCall>("functionCall")
       element<List<CompletionToolCall>>("toolCalls")
     }
     
-    @OptIn(ExperimentalSerializationApi::class)
+    @OptIn(InternalSerializationApi::class)
     @Suppress("DEPRECATION")
     override fun serialize(encoder: Encoder, value: CompletionMessage) {
       require(encoder is JsonEncoder)
@@ -426,12 +426,17 @@ sealed class CompletionMessage(val role: String) {
               value.name?.let { root.encodeStringElement(descriptor, 2, it) }
             }
             is UserMessageType.Array -> {
-              val contentArray = encoder.beginStructure(descriptor)
+              val contents = mutableListOf<UserMessageContent>().apply {
+                value.content.textContent.text?.let { add(value.content.textContent) }
+                value.content.imageContent.image?.let { add(value.content.imageContent) }
+              }
               
-              contentArray.encodeNullableSerializableElement(descriptor, 6, UserMessageText.serializer(), value.content.textContent)
-              contentArray.encodeNullableSerializableElement(descriptor, 7, UserMessageImage.serializer(), value.content.imageContent)
-              
-              contentArray.endStructure(descriptor)
+              root.encodeSerializableElement(
+                descriptor,
+                1,
+                ListSerializer(UserMessageContent::class.serializer()),
+                contents
+              )
               
               value.name?.let { root.encodeStringElement(descriptor, 2, it) }
             }
@@ -482,7 +487,7 @@ sealed class UserMessageType {
    * @param imageContent The image content of the message.
    */
   @Serializable
-  data class Array(val textContent: UserMessageText = UserMessageText(), val imageContent: UserMessageImage = UserMessageImage()) : UserMessageType() {
+  data class Array(val textContent: UserMessageContent.Text = UserMessageContent.Text(), val imageContent: UserMessageContent.Image = UserMessageContent.Image()) : UserMessageType() {
     init {
       require(textContent.type != null || imageContent.type != null) {
         "either textContent or imageContent must be specified"
@@ -492,40 +497,49 @@ sealed class UserMessageType {
 }
 
 /**
- * The text content of a user message.
- *
- * @param text The text content.
- * @param type The type of the content part.
+ * The content of a user message.
+ * 
+ * @property Text The text content of a user message.
+ * @property Image The image content of a user message.
  */
 @Serializable
-data class UserMessageText(
-  val text: String? = null,
-  val type: String? = "text",
-)
-
-/**
- * The image content of a user message.
- *
- * @param image The [Image] object.
- * @param type The type of the content part.
- */
-@Serializable
-data class UserMessageImage(
-  @SerialName("image_url")
-  val image: Image? = null,
-  val type: String? = "image_url",
-) {
+sealed class UserMessageContent {
   /**
-   * Image object.
+   * The text content of a user message.
    *
-   * @param detail Specifies the detail level of the image.
-   * @param url Either a URL of the image or the base64 encoded image data.
+   * @param text The text content.
+   * @param type The type of the content part.
+   */
+  @Serializable
+  data class Text(
+    val text: String? = null,
+    val type: String? = "text",
+  ) : UserMessageContent()
+  
+  /**
+   * The image content of a user message.
+   *
+   * @param image The [ImageObject].
+   * @param type The type of the content part.
    */
   @Serializable
   data class Image(
-    val detail: String? = null,
-    val url: String? = null,
-  )
+    @SerialName("image_url")
+    val image: ImageObject? = null,
+    val type: String? = "image_url",
+  ) : UserMessageContent() {
+    /**
+     * Image object.
+     *
+     * @param detail Specifies the detail level of the image.
+     * @param url Either a URL of the image or the base64 encoded image data.
+     */
+    @Serializable
+    data class ImageObject(
+      val detail: String? = null,
+      val url: String? = null,
+    )
+  }
 }
 
 /**
