@@ -5,7 +5,7 @@
 **An idiomatic [Kotlin Multiplatform](https://kotlinlang.org/docs/multiplatform.html) library for the [Groq](https://groq.com/) API.**
 
 ## 💎 Features
-- 🚀 Built on [Ktor](https://ktor.io/) for seamless networking
+- 🚀 Built with [Ktor](https://ktor.io/) for seamless networking
 - 🎨 Complete and documented API for chat completions, audio transcription, and translation, including tool support and function calling
 - ⚡ Real-time streaming responses via Kotlin Flows
 - 🧩 Rich, idiomatic DSL for clean and expressive syntax
@@ -112,4 +112,4 @@ The project is not affiliated with [Groq](https://groq.com/) in any way.
 The REST API documentation can be found on [console.groq.com](https://console.groq.com/docs).
 
 ## 🌱 Contributing
-This project is in beta. Contributions of any kind are welcome, just make sure you read the [Contribution Guidelines](./.github/CONTRIBUTING.md) first. You can also contact me directly on Discord (**[vyfor](https://discord.com/users/446729269872427018)**) if you have any questions.
+This project is in beta and hasn't undergone excessive testing. Contributions of any kind are welcome, just make sure you read the [Contribution Guidelines](./.github/CONTRIBUTING.md) first. You can also contact me directly on Discord (**[vyfor](https://discord.com/users/446729269872427018)**) if you have any questions.
