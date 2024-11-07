@@ -55,7 +55,7 @@ kotlin {
     watchosX64()
     
     sourceSets {
-        val ktorVersion = "3.0.1"
+        val ktorVersion = "3.0.0"
         
         val commonMain by getting {
             dependencies {
@@ -122,4 +122,22 @@ mavenPublishing {
     publishToMavenCentral(SonatypeHost.CENTRAL_PORTAL)
     
     signAllPublications()
+}
+
+tasks.register("compileAllTargets") {
+    group = "build"
+    description = "Compiles all available targets for this project"
+    
+    dependsOn(
+        kotlin.targets.mapNotNull { target ->
+            val taskName = "compileKotlin${target.name.replaceFirstChar { it.titlecase() }}"
+            tasks.findByName(taskName)?.also {
+                println("Found target: $taskName")
+            }
+        }
+    )
+    
+    doLast {
+        println("All targets have been compiled successfully.")
+    }
 }
