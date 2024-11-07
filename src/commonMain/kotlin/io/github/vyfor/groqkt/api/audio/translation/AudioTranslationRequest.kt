@@ -6,21 +6,25 @@ import io.github.vyfor.groqkt.GroqModel
 import io.github.vyfor.groqkt.api.shared.GroqDsl
 import io.github.vyfor.groqkt.api.audio.AudioResponseFormat
 import io.ktor.utils.io.*
+import io.ktor.utils.io.core.*
 import kotlinx.io.Source
 import kotlinx.io.buffered
 import kotlinx.io.files.Path
 import kotlinx.io.files.SystemFileSystem
+import kotlinx.io.files.SystemPathSeparator
 import kotlinx.io.readByteArray
+import kotlinx.serialization.Serializable
 
 /**
  * Data used for translating audio into English.
  *
- * @param file The audio file object (not file name) translate, in one of these formats: flac, mp3, mp4, mpeg, mpga, m4a, ogg, wav, or webm.
+ * @param file The audio file object (not file name) to translate, in one of these formats: flac, mp3, mp4, mpeg, mpga, m4a, ogg, wav, or webm.
  * @param model The model to use.
  * @param prompt An optional text to guide the model's style or continue a previous audio segment. The prompt should be in English.
  * @param responseFormat The format of the transcript output.
  * @param temperature The sampling temperature, between 0 and 1. Higher values like 0.8 will make the output more random, while lower values like 0.2 will make it more focused and deterministic. If set to 0, the model will use log probability to automatically increase the temperature until certain thresholds are hit.
  */
+@Serializable
 data class AudioTranslationRequest(
   val file: ByteArray,
   val model: GroqModel,
@@ -28,6 +32,8 @@ data class AudioTranslationRequest(
   val responseFormat: AudioResponseFormat? = null,
   val temperature: Double? = null,
 )  {
+  var filename: String = "audio.mp3"
+  
   companion object {
     const val ENDPOINT = "audio/translations"
   }
@@ -35,7 +41,7 @@ data class AudioTranslationRequest(
   /**
    * Convenient builder for [AudioTranslationRequest].
    *
-   * @property file The audio file object (not file name) translate, in one of these formats: flac, mp3, mp4, mpeg, mpga, m4a, ogg, wav, or webm.
+   * @property file The audio file object (not file name) to translate, in one of these formats: flac, mp3, mp4, mpeg, mpga, m4a, ogg, wav, or webm.
    * @property model The model to use.
    * @property prompt An optional text to guide the model's style or continue a previous audio segment. The prompt should be in English.
    * @property responseFormat The format of the transcript output.
@@ -44,6 +50,7 @@ data class AudioTranslationRequest(
   @GroqDsl
   class Builder {
     var file: ByteArray? = null
+    var filename: String? = null
     var model: GroqModel? = null
     var prompt: String? = null
     var responseFormat: AudioResponseFormat? = null
@@ -55,6 +62,7 @@ data class AudioTranslationRequest(
      * @param file The file path as a [String].
      */
     fun file(file: String) = apply {
+      this.filename = file.substringAfterLast(SystemPathSeparator)
       this.file = SystemFileSystem.source(Path(file)).buffered().readByteArray()
     }
     
@@ -64,6 +72,7 @@ data class AudioTranslationRequest(
      * @param file The file as a [Path].
      */
     fun file(file: Path) = apply {
+      this.filename = file.name
       this.file = SystemFileSystem.source(file).buffered().readByteArray()
     }
     
@@ -93,7 +102,9 @@ data class AudioTranslationRequest(
         prompt,
         responseFormat,
         temperature,
-      )
+      ).apply {
+        this.filename = requireNotNull(this@Builder.filename) { "filename must be set" }
+      }
     }
   }
   

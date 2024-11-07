@@ -485,7 +485,7 @@ sealed class UserMessageType {
   data class Array(val textContent: UserMessageText = UserMessageText(), val imageContent: UserMessageImage = UserMessageImage()) : UserMessageType() {
     init {
       require(textContent.type != null || imageContent.type != null) {
-        "Either textContent or imageContent must be specified"
+        "either textContent or imageContent must be specified"
       }
     }
   }

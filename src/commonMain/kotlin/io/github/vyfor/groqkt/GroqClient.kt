@@ -6,6 +6,7 @@ import io.github.vyfor.groqkt.api.GroqRatelimit
 import io.github.vyfor.groqkt.api.GroqResponse
 import io.github.vyfor.groqkt.api.GroqResponseType
 import io.github.vyfor.groqkt.api.GroqStreamingResponse
+import io.github.vyfor.groqkt.api.audio.transcription.AudioTranscription
 import io.github.vyfor.groqkt.api.audio.transcription.AudioTranscriptionRequest
 import io.github.vyfor.groqkt.api.audio.translation.AudioTranslation
 import io.github.vyfor.groqkt.api.audio.translation.AudioTranslationRequest
@@ -177,7 +178,9 @@ class GroqClient(
     .submitFormWithBinaryData(
       AudioTranslationRequest.ENDPOINT,
       formData {
-        append("file", data.file)
+        append("file", data.file, Headers.build {
+          append(HttpHeaders.ContentDisposition, "filename=\"${data.filename.encodeURLPathPart()}\"")
+        })
         append("model", data.model.id)
         data.prompt?.let { append("prompt", it) }
         data.responseFormat?.let { append("response_format", it.name) }
@@ -199,7 +202,9 @@ class GroqClient(
       AudioTranslationRequest.ENDPOINT,
       formData {
         AudioTranslationRequest.Builder().apply(block).build().let { data ->
-          append("file", data.file)
+          append("file", data.file, Headers.build {
+            append(HttpHeaders.ContentDisposition, "filename=\"${data.filename.encodeURLPathPart()}\"")
+          })
           append("model", data.model.id)
           data.prompt?.let { append("prompt", it) }
           data.responseFormat?.let { append("response_format", it.name) }
@@ -220,9 +225,13 @@ class GroqClient(
    */
   suspend fun transcribeAudio(data: AudioTranscriptionRequest) = client
     .submitFormWithBinaryData(
-      AudioTranslationRequest.ENDPOINT,
+      AudioTranscriptionRequest.ENDPOINT,
       formData {
-        append("file", data.file)
+        data.file?.let {
+          append("file", it, Headers.build {
+            append(HttpHeaders.ContentDisposition, "filename=\"${data.filename.encodeURLPathPart()}\"")
+          })
+        }
         append("model", data.model.id)
         data.language?.let { append("language", it) }
         data.prompt?.let { append("prompt", it) }
@@ -237,7 +246,7 @@ class GroqClient(
     ) {
       contentType(ContentType.MultiPart.FormData)
     }
-    .parse<AudioTranslation>()
+    .parse<AudioTranscription>()
   
   /**
    * Transcribe an audio file
@@ -247,11 +256,16 @@ class GroqClient(
    */
   suspend fun transcribeAudio(block: AudioTranscriptionRequest.Builder.() -> Unit) = client
     .submitFormWithBinaryData(
-      AudioTranslationRequest.ENDPOINT,
+      AudioTranscriptionRequest.ENDPOINT,
       formData {
         AudioTranscriptionRequest.Builder().apply(block).build().let { data ->
-          append("file", data.file)
+          data.file?.let {
+            append("file", it, Headers.build {
+              append(HttpHeaders.ContentDisposition, "filename=\"${data.filename.encodeURLPathPart()}\"")
+            })
+          }
           append("model", data.model.id)
+          data.url?.let { append("url", it) }
           data.language?.let { append("language", it) }
           data.prompt?.let { append("prompt", it) }
           data.responseFormat?.let { append("response_format", it.name) }
@@ -266,7 +280,7 @@ class GroqClient(
     ) {
       contentType(ContentType.MultiPart.FormData)
     }
-    .parse<AudioTranslation>()
+    .parse<AudioTranscription>()
   
   /**
    * Fetch a specific model

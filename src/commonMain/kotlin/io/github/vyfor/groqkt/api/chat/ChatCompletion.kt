@@ -105,21 +105,21 @@ data class ChatCompletionDelta(
 /**
  * Token usage details.
  *
- * @property queueTime Time taken to process the request in seconds.
  * @property promptTokens Number of tokens used in the input prompt.
- * @property promptTime Time taken to generate the prompt in seconds.
  * @property completionTokens Number of tokens used in the completion response.
- * @property completionTime Time taken to generate the completion response in seconds.
  * @property totalTokens Total number of tokens used.
+ * @property queueTime Time taken to process the request in seconds.
+ * @property promptTime Time taken to generate the prompt in seconds.
+ * @property completionTime Time taken to generate the completion response in seconds.
  * @property totalTime Total time taken in seconds.
  */
 @Serializable
 data class ChatCompletionUsage(
-  val queueTime: Double,
   val promptTokens: Int,
-  val promptTime: Double,
   val completionTokens: Int,
-  val completionTime: Double,
   val totalTokens: Int,
-  val totalTime: Double,
+  val queueTime: Double?,
+  val promptTime: Double?,
+  val completionTime: Double?,
+  val totalTime: Double?,
 )

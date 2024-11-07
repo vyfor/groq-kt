@@ -11,12 +11,14 @@ import kotlinx.io.Source
 import kotlinx.io.buffered
 import kotlinx.io.files.Path
 import kotlinx.io.files.SystemFileSystem
+import kotlinx.io.files.SystemPathSeparator
 import kotlinx.io.readByteArray
+import kotlinx.serialization.Serializable
 
 /**
  * Data used for translating audio into English.
  *
- * @param file The audio file object (not file name) translate, in one of these formats: flac, mp3, mp4, mpeg, mpga, m4a, ogg, wav, or webm.
+ * @param file The audio file object (not file name) to transcribe, in one of these formats: flac, mp3, mp4, mpeg, mpga, m4a, ogg, wav, or webm.
  * @param language The language of the input audio. Supplying the input language in ISO-639-1 format will improve accuracy and latency.
  * @param model The model to use.
  * @param prompt An optional text to guide the model's style or continue a previous audio segment. The prompt should be in English.
@@ -24,8 +26,10 @@ import kotlinx.io.readByteArray
  * @param temperature The sampling temperature, between 0 and 1. Higher values like 0.8 will make the output more random, while lower values like 0.2 will make it more focused and deterministic. If set to 0, the model will use log probability to automatically increase the temperature until certain thresholds are hit.
  * @param timestampGranularities The timestamp granularities to populate for this transcription. [responseFormat] must be set to [AudioResponseFormat.VERBOSE_JSON] to use timestamp granularities. Either or both of these options are supported. Note: There is no additional latency for segment timestamps, but generating word timestamps incurs additional latency.
  */
+@Serializable
 data class AudioTranscriptionRequest(
-  val file: ByteArray,
+  val file: ByteArray? = null,
+  val url: String? = null,
   val language: String? = null,
   val model: GroqModel,
   val prompt: String? = null,
@@ -33,6 +37,12 @@ data class AudioTranscriptionRequest(
   val temperature: Double? = null,
   val timestampGranularities: List<TimestampGranularity>? = null
 )  {
+  var filename: String = "audio.mp3"
+  
+  init {
+    require(file != null || url != null) { "either file or url must be set" }
+  }
+  
   companion object {
     const val ENDPOINT = "audio/transcriptions"
   }
@@ -40,7 +50,11 @@ data class AudioTranscriptionRequest(
   /**
    * Convenient builder for [AudioTranscriptionRequest].
    *
-   * @property file The audio file object (not file name) translate, in one of these formats: flac, mp3, mp4, mpeg, mpga, m4a, ogg, wav, or webm.
+   * Only one of [file] or [url] must be set.
+   *
+   * @property file The audio file object (not file name) to transcribe, in one of these formats: flac, mp3, mp4, mpeg, mpga, m4a, ogg, wav, or webm.
+   * @property filename The filename of the audio file to transcribe.
+   * @property url The URL of the audio file to transcribe.
    * @property model The model to use.
    * @property prompt An optional text to guide the model's style or continue a previous audio segment. The prompt should be in English.
    * @property responseFormat The format of the transcript output.
@@ -49,6 +63,8 @@ data class AudioTranscriptionRequest(
   @GroqDsl
   class Builder {
     var file: ByteArray? = null
+    var filename: String? = null
+    var url: String? = null
     var language: String? = null
     var model: GroqModel? = null
     var prompt: String? = null
@@ -62,6 +78,7 @@ data class AudioTranscriptionRequest(
      * @param file The file path as a [String].
      */
     fun file(file: String) = apply {
+      this.filename = file.substringAfterLast(SystemPathSeparator)
       this.file = SystemFileSystem.source(Path(file)).buffered().readByteArray()
     }
     
@@ -71,6 +88,7 @@ data class AudioTranscriptionRequest(
      * @param file The file as a [Path].
      */
     fun file(file: Path) = apply {
+      this.filename = file.name
       this.file = SystemFileSystem.source(file).buffered().readByteArray()
     }
     
@@ -101,14 +119,17 @@ data class AudioTranscriptionRequest(
     
     fun build(): AudioTranscriptionRequest {
       return AudioTranscriptionRequest(
-        requireNotNull(file) { "file must be set" },
+        file,
+        url,
         language,
         requireNotNull(model) { "model must be set" },
         prompt,
         responseFormat,
         temperature,
         timestampGranularities
-      )
+      ).apply {
+        this.filename = requireNotNull(this@Builder.filename) { "filename must be set" }
+      }
     }
   }
   
