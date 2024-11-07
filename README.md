@@ -43,9 +43,9 @@ For the list of supported engines, see [Ktor Client Engines](https://ktor.io/doc
 ### Initialization
 ```kotlin
 /* It is recommended to use an environment variable for the API key */
-val apiKey = System.getenv("GROQ_API_KEY")       // JVM
-val apiKey = process.env.GROQ_API_KEY            // JS
-val apiKey = getenv("GROQ_API_KEY")?.toKString() // Native
+val apiKey = System.getenv("GROQ_API_KEY")        // JVM
+val apiKey = process.env.GROQ_API_KEY             // JS
+val apiKey = getenv("GROQ_API_KEY")!!.toKString() // Native
 
 val client = Groq(apiKey)
 ```
