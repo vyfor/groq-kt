@@ -31,7 +31,10 @@ kotlin {
     iosArm64()
     iosSimulatorArm64()
     iosX64()
-    js()
+    js {
+        browser()
+        nodejs()
+    }
     jvm()
     linuxArm64()
     linuxX64()
@@ -41,7 +44,10 @@ kotlin {
     tvosArm64()
     tvosSimulatorArm64()
     tvosX64()
-    wasmJs()
+    wasmJs {
+        browser()
+        nodejs()
+    }
     watchosArm32()
     watchosArm64()
     watchosDeviceArm64()
