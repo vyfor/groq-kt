@@ -23,11 +23,9 @@ import io.ktor.client.request.*
 import io.ktor.client.request.forms.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
-import io.ktor.http.content.*
 import io.ktor.serialization.kotlinx.json.*
 import io.ktor.utils.io.*
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.IO
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
@@ -136,7 +134,7 @@ class GroqClient(
               emit(Result.success(chunk))
             }
           }
-        }.flowOn(Dispatchers.IO).catch { e -> emit(Result.failure(e)) }
+        }.flowOn(Dispatchers.Default).catch { e -> emit(Result.failure(e)) }
       )
     }
   
@@ -164,7 +162,7 @@ class GroqClient(
               emit(Result.success(chunk))
             }
           }
-        }.flowOn(Dispatchers.IO).catch { e -> emit(Result.failure(e)) }
+        }.flowOn(Dispatchers.Default).catch { e -> emit(Result.failure(e)) }
       )
     }
   
