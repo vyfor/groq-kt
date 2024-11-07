@@ -1,0 +1,49 @@
+name: Release
+
+permissions:
+  contents: read
+
+on:
+  push:
+    tags:
+      - v*
+  workflow_dispatch:
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  publish:
+    name: Build and Publish
+    runs-on: macos-latest
+    if: ${{ !contains(github.event.head_commit.message, '#skip') }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '8'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
+
+      - name: Cache Konan
+        id: cache-kotlin-konan
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.konan/**/*
+          key: kotlin-konan
+
+      - name: Publish to Maven Central
+        run: ./gradlew publishAllPublicationsToMavenCentralRepository
+        env:
+          ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.SONATYPE_NEXUS_USERNAME }}
+          ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.SONATYPE_NEXUS_PASSWORD }}
+          ORG_GRADLE_PROJECT_signingInMemoryKey: ${{ secrets.SIGNING_PRIVATE_KEY }}
+          ORG_GRADLE_PROJECT_signingInMemoryKeyPassword: ${{ secrets.SIGNING_PASSWORD }}
