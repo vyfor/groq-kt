@@ -2,6 +2,7 @@ package io.github.vyfor.groqkt.api
 
 import io.github.vyfor.groqkt.api.chat.ChatCompletionUsage
 import io.github.vyfor.groqkt.api.shared.XGroq
+import kotlinx.coroutines.flow.Flow
 import kotlinx.serialization.*
 import kotlinx.serialization.descriptors.*
 import kotlinx.serialization.encoding.Decoder
@@ -22,6 +23,11 @@ data class GroqResponse<T>(
 ) {
   var ratelimit: GroqRatelimit? = null
 }
+
+data class GroqStreamingResponse<T>(
+  val ratelimit: GroqRatelimit?,
+  val data: Flow<Result<T>>,
+)
 
 @Serializable
 data class GroqRatelimit(

@@ -5,6 +5,7 @@ package io.github.vyfor.groqkt
 import io.github.vyfor.groqkt.api.GroqRatelimit
 import io.github.vyfor.groqkt.api.GroqResponse
 import io.github.vyfor.groqkt.api.GroqResponseType
+import io.github.vyfor.groqkt.api.GroqStreamingResponse
 import io.github.vyfor.groqkt.api.audio.transcription.AudioTranscription
 import io.github.vyfor.groqkt.api.audio.transcription.AudioTranscriptionRequest
 import io.github.vyfor.groqkt.api.audio.translation.AudioTranslation
@@ -36,16 +37,16 @@ import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 
+/**
+ * A client used to interact with the Groq API.
+ *
+ * @property apiKey The API key obtained from [here](https://console.groq.com/keys).
+ * @property client Optional [HttpClient] instance. Don't override this unless you know what you're doing.
+ */
 @Suppress("MemberVisibilityCanBePrivate")
 @OptIn(ExperimentalSerializationApi::class, ExperimentalStdlibApi::class)
 class GroqClient(
   private val apiKey: String,
-  private val json: Json = Json {
-    explicitNulls = false
-    encodeDefaults = true
-    ignoreUnknownKeys = true
-    namingStrategy = JsonNamingStrategy.SnakeCase
-  },
   private val client: HttpClient = HttpClient {
     install(ContentNegotiation) {
       json(json)
@@ -80,7 +81,6 @@ class GroqClient(
     }
   }
 ) : AutoCloseable {
-  
   /**
    * Create a model response for the given chat conversation.
    *
@@ -114,48 +114,54 @@ class GroqClient(
    * Stream a model response for the given chat conversation.
    *
    * @param data The chat completion request
-   * @return Result<GroqResponse<ChatCompletion>>
+   * @return GroqStreamingResponse<StreamingChatCompletion>
    */
-  suspend fun chatStreaming(data: ChatCompletionRequest) = flow<Result<StreamingChatCompletion>> {
-    client
-      .post(ChatCompletionRequest.ENDPOINT) {
-        contentType(ContentType.Application.Json)
-        setBody(data.apply { stream = true })
-      }
-      .bodyAsChannel()
-      .apply {
-        while (!isClosedForRead) {
-          val line = readUTF8Line()?.removePrefix("data: ")?.takeIf { it.startsWith("{") } ?: continue
-          val chunk = json.decodeFromString<StreamingChatCompletion>(line)
-          emit(Result.success(chunk))
-        }
-      }
-  }.flowOn(Dispatchers.IO).catch { e -> emit(Result.failure(e)) }
+  suspend fun chatStreaming(data: ChatCompletionRequest) = client
+    .post(ChatCompletionRequest.ENDPOINT) {
+      contentType(ContentType.Application.Json)
+      setBody(data.apply { stream = true })
+    }.run {
+      GroqStreamingResponse(
+        parseHeaders(),
+        flow<Result<StreamingChatCompletion>> {
+          bodyAsChannel().apply {
+            while (!isClosedForRead) {
+              val line = readUTF8Line()?.removePrefix("data: ")?.takeIf { it.startsWith("{") } ?: continue
+              val chunk = json.decodeFromString<StreamingChatCompletion>(line)
+              emit(Result.success(chunk))
+            }
+          }
+        }.flowOn(Dispatchers.IO).catch { e -> emit(Result.failure(e)) }
+      )
+    }
   
   /**
    * Stream a model response for the given chat conversation.
    *
    * @param block The chat completion request
-   * @return Result<GroqResponse<ChatCompletion>>
+   * @return GroqStreamingResponse<StreamingChatCompletion>
    */
-  suspend fun chatStreaming(block: ChatCompletionRequest.Builder.() -> Unit) = flow<Result<StreamingChatCompletion>> {
-    client
-      .post(ChatCompletionRequest.ENDPOINT) {
-        contentType(ContentType.Application.Json)
-        setBody(ChatCompletionRequest.Builder().apply {
-          block()
-          stream = true
-        }.build())
-      }
-      .bodyAsChannel()
-      .apply {
-        while (!isClosedForRead) {
-          val line = readUTF8Line()?.removePrefix("data: ")?.takeIf { it.startsWith("{") } ?: continue
-          val chunk = json.decodeFromString<StreamingChatCompletion>(line)
-          emit(Result.success(chunk))
-        }
-      }
-  }.flowOn(Dispatchers.IO).catch { e -> emit(Result.failure(e)) }
+  suspend fun chatStreaming(block: ChatCompletionRequest.Builder.() -> Unit) = client
+    .post(ChatCompletionRequest.ENDPOINT) {
+      contentType(ContentType.Application.Json)
+      setBody(ChatCompletionRequest.Builder().apply {
+        block()
+        stream = true
+      }.build())
+    }.run {
+      GroqStreamingResponse(
+        parseHeaders(),
+        flow<Result<StreamingChatCompletion>> {
+          bodyAsChannel().apply {
+            while (!isClosedForRead) {
+              val line = readUTF8Line()?.removePrefix("data: ")?.takeIf { it.startsWith("{") } ?: continue
+              val chunk = json.decodeFromString<StreamingChatCompletion>(line)
+              emit(Result.success(chunk))
+            }
+          }
+        }.flowOn(Dispatchers.IO).catch { e -> emit(Result.failure(e)) }
+      )
+    }
   
   /**
    * Translate an audio file
@@ -244,6 +250,12 @@ class GroqClient(
   
   companion object {
     const val BASE_URL: String = "https://api.groq.com/openai/v1/"
+    private val json: Json = Json {
+      explicitNulls = false
+      encodeDefaults = true
+      ignoreUnknownKeys = true
+      namingStrategy = JsonNamingStrategy.SnakeCase
+    }
     
     private suspend inline fun <reified T> HttpResponse.validate(): Result<T> {
       return if (status.isSuccess())
@@ -266,25 +278,30 @@ class GroqClient(
             data = result.data,
             xGroq = result.xGroq
           ).apply {
-            val limitRequests = headers["x-ratelimit-limit-requests"]?.toIntOrNull()
-            val limitTokens = headers["x-ratelimit-limit-tokens"]?.toIntOrNull()
-            val remainingRequests = headers["x-ratelimit-remaining-requests"]?.toIntOrNull()
-            val remainingTokens = headers["x-ratelimit-remaining-tokens"]?.toIntOrNull()
-            val resetRequests = headers["x-ratelimit-reset-requests"]?.parseDuration()
-            val resetTokens = headers["x-ratelimit-reset-tokens"]?.parseDuration()
-            
-            if (limitRequests != null)
-              ratelimit = GroqRatelimit(
-                limitRequests = limitRequests,
-                limitTokens = limitTokens ?: -1,
-                remainingRequests = remainingRequests ?: -1,
-                remainingTokens = remainingTokens ?: -1,
-                resetRequests = resetRequests ?: Duration.INFINITE,
-                resetTokens = resetTokens ?: Duration.INFINITE
-              )
+            ratelimit = parseHeaders()
           }
         )
         is GroqResponseType.Error -> Result.failure(result.error)
+      }
+    }
+    
+    private fun HttpResponse.parseHeaders(): GroqRatelimit? {
+      val limitRequests = headers["x-ratelimit-limit-requests"]?.toIntOrNull()
+      val limitTokens = headers["x-ratelimit-limit-tokens"]?.toIntOrNull()
+      val remainingRequests = headers["x-ratelimit-remaining-requests"]?.toIntOrNull()
+      val remainingTokens = headers["x-ratelimit-remaining-tokens"]?.toIntOrNull()
+      val resetRequests = headers["x-ratelimit-reset-requests"]?.parseDuration()
+      val resetTokens = headers["x-ratelimit-reset-tokens"]?.parseDuration()
+      
+      return limitRequests?.let {
+        GroqRatelimit(
+          limitRequests = limitRequests,
+          limitTokens = limitTokens ?: -1,
+          remainingRequests = remainingRequests ?: -1,
+          remainingTokens = remainingTokens ?: -1,
+          resetRequests = resetRequests ?: Duration.INFINITE,
+          resetTokens = resetTokens ?: Duration.INFINITE
+        )
       }
     }
     
