@@ -6,7 +6,6 @@ import io.github.vyfor.groqkt.api.GroqRatelimit
 import io.github.vyfor.groqkt.api.GroqResponse
 import io.github.vyfor.groqkt.api.GroqResponseType
 import io.github.vyfor.groqkt.api.GroqStreamingResponse
-import io.github.vyfor.groqkt.api.audio.transcription.AudioTranscription
 import io.github.vyfor.groqkt.api.audio.transcription.AudioTranscriptionRequest
 import io.github.vyfor.groqkt.api.audio.translation.AudioTranslation
 import io.github.vyfor.groqkt.api.audio.translation.AudioTranslationRequest
@@ -20,8 +19,10 @@ import io.ktor.client.call.*
 import io.ktor.client.plugins.*
 import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.request.*
+import io.ktor.client.request.forms.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
+import io.ktor.http.content.*
 import io.ktor.serialization.kotlinx.json.*
 import io.ktor.utils.io.*
 import kotlinx.coroutines.Dispatchers
@@ -30,8 +31,11 @@ import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.serialization.ExperimentalSerializationApi
+import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonNamingStrategy
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.buildJsonArray
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.minutes
@@ -170,9 +174,17 @@ class GroqClient(
    * @return Result<GroqResponse<AudioTranslation>>
    */
   suspend fun translateAudio(data: AudioTranslationRequest) = client
-    .post(AudioTranslationRequest.ENDPOINT) {
+    .submitFormWithBinaryData(
+      AudioTranslationRequest.ENDPOINT,
+      formData {
+        append("file", data.file)
+        append("model", data.model.id)
+        data.prompt?.let { append("prompt", it) }
+        data.responseFormat?.let { append("response_format", it.name) }
+        data.temperature?.let { append("temperature", it.toString()) }
+      }
+    ) {
       contentType(ContentType.MultiPart.FormData)
-      setBody(data)
     }
     .parse<AudioTranslation>()
   
@@ -183,9 +195,19 @@ class GroqClient(
    * @return Result<GroqResponse<AudioTranslation>>
    */
   suspend fun translateAudio(block: AudioTranslationRequest.Builder.() -> Unit) = client
-    .post(AudioTranslationRequest.ENDPOINT) {
+    .submitFormWithBinaryData(
+      AudioTranslationRequest.ENDPOINT,
+      formData {
+        AudioTranslationRequest.Builder().apply(block).build().let { data ->
+          append("file", data.file)
+          append("model", data.model.id)
+          data.prompt?.let { append("prompt", it) }
+          data.responseFormat?.let { append("response_format", it.name) }
+          data.temperature?.let { append("temperature", it.toString()) }
+        }
+      }
+    ) {
       contentType(ContentType.MultiPart.FormData)
-      setBody(AudioTranslationRequest.Builder().apply(block).build())
     }
     .parse<AudioTranslation>()
   
@@ -197,11 +219,25 @@ class GroqClient(
    * @return Result<GroqResponse<AudioTranscription>>
    */
   suspend fun transcribeAudio(data: AudioTranscriptionRequest) = client
-    .post(AudioTranscriptionRequest.ENDPOINT) {
+    .submitFormWithBinaryData(
+      AudioTranslationRequest.ENDPOINT,
+      formData {
+        append("file", data.file)
+        append("model", data.model.id)
+        data.language?.let { append("language", it) }
+        data.prompt?.let { append("prompt", it) }
+        data.responseFormat?.let { append("response_format", it.name) }
+        data.temperature?.let { append("temperature", it.toString()) }
+        data.timestampGranularities?.let {
+          append("timestamp_granularities", json.encodeToString(buildJsonArray{
+            it.forEach { enum -> add(JsonPrimitive(enum.value)) }
+          }.toString()))
+        }
+      }
+    ) {
       contentType(ContentType.MultiPart.FormData)
-      setBody(data)
     }
-    .parse<AudioTranscription>()
+    .parse<AudioTranslation>()
   
   /**
    * Transcribe an audio file
@@ -210,11 +246,27 @@ class GroqClient(
    * @return Result<GroqResponse<AudioTranscription>>
    */
   suspend fun transcribeAudio(block: AudioTranscriptionRequest.Builder.() -> Unit) = client
-    .post(AudioTranslationRequest.ENDPOINT) {
+    .submitFormWithBinaryData(
+      AudioTranslationRequest.ENDPOINT,
+      formData {
+        AudioTranscriptionRequest.Builder().apply(block).build().let { data ->
+          append("file", data.file)
+          append("model", data.model.id)
+          data.language?.let { append("language", it) }
+          data.prompt?.let { append("prompt", it) }
+          data.responseFormat?.let { append("response_format", it.name) }
+          data.temperature?.let { append("temperature", it.toString()) }
+          data.timestampGranularities?.let {
+            append("timestamp_granularities", json.encodeToString(buildJsonArray{
+              it.forEach { enum -> add(JsonPrimitive(enum.value)) }
+            }.toString()))
+          }
+        }
+      }
+    ) {
       contentType(ContentType.MultiPart.FormData)
-      setBody(AudioTranscriptionRequest.Builder().apply(block).build())
     }
-    .parse<AudioTranscription>()
+    .parse<AudioTranslation>()
   
   /**
    * Fetch a specific model
