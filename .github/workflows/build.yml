@@ -42,4 +42,4 @@ jobs:
           key: kotlin-konan
 
       - name: Build project
-        run: ./gradlew build --build-cache --parallel --no-daemon
+        run: ./gradlew compileAllTargets --build-cache --parallel --no-daemon
