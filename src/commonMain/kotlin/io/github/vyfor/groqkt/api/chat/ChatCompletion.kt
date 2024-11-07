@@ -23,8 +23,8 @@ data class ChatCompletion(
   val created: Long,
   val model: GroqModel,
   val choices: List<ChatCompletionChoice>,
-  val usage: ChatCompletionUsage,
-  val systemFingerprint: String,
+  val usage: ChatCompletionUsage?,
+  val systemFingerprint: String? = null,
 )
 
 /**
@@ -46,8 +46,8 @@ data class StreamingChatCompletion(
   val created: Long,
   val model: GroqModel,
   val choices: List<StreamingChatCompletionChoice>,
-  val usage: ChatCompletionUsage,
-  val systemFingerprint: String,
+  val usage: ChatCompletionUsage?,
+  val systemFingerprint: String? = null,
 )
 
 /**
@@ -80,13 +80,13 @@ data class ChatCompletionMessage(
  * Streaming chat completion choice.
  *
  * @property index Index of the choice in the list of choices.
- * @property message The message content, streamed incrementally.
+ * @property delta The message content, streamed incrementally.
  * @property finishReason Optional reason for the completion's termination.
  */
 @Serializable
 data class StreamingChatCompletionChoice(
   val index: Int,
-  val message: ChatCompletionDelta,
+  val delta: ChatCompletionDelta,
   val finishReason: String?,
 )
 
@@ -99,19 +99,27 @@ data class StreamingChatCompletionChoice(
 @Serializable
 data class ChatCompletionDelta(
   val role: String?,
-  val content: String,
+  val content: String?,
 )
 
 /**
  * Token usage details.
  *
+ * @property queueTime Time taken to process the request in seconds.
  * @property promptTokens Number of tokens used in the input prompt.
+ * @property promptTime Time taken to generate the prompt in seconds.
  * @property completionTokens Number of tokens used in the completion response.
+ * @property completionTime Time taken to generate the completion response in seconds.
  * @property totalTokens Total number of tokens used.
+ * @property totalTime Total time taken in seconds.
  */
 @Serializable
 data class ChatCompletionUsage(
+  val queueTime: Double,
   val promptTokens: Int,
+  val promptTime: Double,
   val completionTokens: Int,
+  val completionTime: Double,
   val totalTokens: Int,
+  val totalTime: Double,
 )

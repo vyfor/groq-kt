@@ -1,14 +1,19 @@
 package io.github.vyfor.groqkt.api
 
-import kotlinx.serialization.Serializable
+import io.github.vyfor.groqkt.api.chat.ChatCompletionUsage
+import io.github.vyfor.groqkt.api.shared.XGroq
+import kotlinx.serialization.*
+import kotlinx.serialization.descriptors.*
+import kotlinx.serialization.encoding.Decoder
+import kotlinx.serialization.encoding.Encoder
+import kotlinx.serialization.json.*
 import kotlin.time.Duration
 
-@Serializable
-data class CompleteGroqResponse<T>(
-  val data: T,
-  val xGroq: XGroq?,
-  val error: GroqError?,
-)
+@Serializable(GroqResponseSerializer::class)
+sealed class GroqResponseType<out T> {
+  data class Ok<out T>(val data: T, val usage: ChatCompletionUsage?,  val xGroq: XGroq?) : GroqResponseType<T>()
+  data class Error(val error: GroqError) : GroqResponseType<Nothing>()
+}
 
 @Serializable
 data class GroqResponse<T>(
@@ -17,11 +22,6 @@ data class GroqResponse<T>(
 ) {
   var ratelimit: GroqRatelimit? = null
 }
-
-@Serializable
-data class XGroq(
-  val id: String,
-)
 
 @Serializable
 data class GroqRatelimit(
@@ -45,5 +45,40 @@ data class GroqError(
   val type: String,
 ) : Throwable(message)
 
-@DslMarker
-annotation class GroqDsl
+class GroqResponseSerializer<T>(private val dataSerializer: KSerializer<T>) : KSerializer<GroqResponseType<T>> {
+  override val descriptor: SerialDescriptor = buildClassSerialDescriptor("Response") {
+    element("Ok", dataSerializer.descriptor)
+    element("Error", buildClassSerialDescriptor("Error") {
+      element<String>("message")
+    })
+  }
+  
+  override fun deserialize(decoder: Decoder): GroqResponseType<T> {
+    require(decoder is JsonDecoder)
+    
+    val element = decoder.decodeJsonElement()
+    if (element is JsonObject && "error" in element)
+      return GroqResponseType.Error(
+        element["error"]!!.jsonObject.run {
+          GroqError(
+            get("message")!!.jsonPrimitive.content,
+            get("type")!!.jsonPrimitive.content
+          )
+        }
+      )
+    
+    return GroqResponseType.Ok(
+      decoder.json.decodeFromJsonElement(dataSerializer, element),
+      element.jsonObject["usage"]?.jsonObject?.let {
+        decoder.json.decodeFromJsonElement(ChatCompletionUsage.serializer(), it)
+      },
+      element.jsonObject["x_groq"]?.let {
+        decoder.json.decodeFromJsonElement(XGroq.serializer(), it)
+      }
+    )
+  }
+  
+  override fun serialize(encoder: Encoder, value: GroqResponseType<T>) {
+    error("Unreachable")
+  }
+}

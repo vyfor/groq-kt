@@ -3,15 +3,13 @@
 package io.github.vyfor.groqkt.api.chat
 
 import io.github.vyfor.groqkt.GroqModel
-import io.github.vyfor.groqkt.api.GroqDsl
+import io.github.vyfor.groqkt.api.shared.GroqDsl
 import io.github.vyfor.groqkt.api.chat.CompletionToolChoice.Auto
 import io.github.vyfor.groqkt.api.chat.CompletionToolChoice.Function
 import io.github.vyfor.groqkt.api.chat.CompletionToolChoice.None
-import kotlinx.serialization.KSerializer
-import kotlinx.serialization.SerialName
-import kotlinx.serialization.Serializable
-import kotlinx.serialization.descriptors.PrimitiveKind
-import kotlinx.serialization.descriptors.PrimitiveSerialDescriptor
+import kotlinx.serialization.*
+import kotlinx.serialization.builtins.ListSerializer
+import kotlinx.serialization.descriptors.*
 import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
 import kotlinx.serialization.json.*
@@ -70,7 +68,7 @@ data class ChatCompletionRequest(
   }
   
   init {
-    require(n == 1) { "Currently only n = 1 is supported." }
+    require(n == null || n == 1) { "Currently only n = 1 is supported." }
     require(streamOptions == null || stream == true) { "streamOptions must have stream = true." }
     require(tools == null || tools.size <= 128) { "Currently only up to 128 tools are supported." }
     require(messages.isNotEmpty()) { "messages must not be empty." }
@@ -93,6 +91,7 @@ data class ChatCompletionRequest(
    * @property presencePenalty Number between -2.0 and 2.0. Positive values penalize new tokens based on whether they appear in the text so far, increasing the model's likelihood to talk about new topics.
    * @property responseFormat The format in which the response should be returned. When using JSON mode, you must also instruct the model to produce JSON yourself via a system or user message.
    * @property seed If specified, our system will make the best effort to sample deterministically, such that repeated requests with the same seed and parameters should return the same result. Determinism is not guaranteed, and you should refer to the `system_fingerprint` response parameter to monitor changes in the backend. TODO system_fingerprint
+   * @property stop Up to 4 sequences where the API will stop generating further tokens. The returned text will not contain the stop sequence.
    * @property stream If set, partial message deltas will be sent.
    * @property streamOptions Options for streaming response. Only set this when you set [stream] to true.
    * @property temperature What sampling temperature to use, between 0 and 2. Higher values like 0.8 will make the output more random, while lower values like 0.2 will make it more focused and deterministic. It is generally recommended to alter either this or [topP] but not both.
@@ -103,23 +102,23 @@ data class ChatCompletionRequest(
    */
   @GroqDsl
   class Builder {
-    private var stops: MutableList<String> = mutableListOf()
     var frequencyPenalty: Double? = null
     var functionCall: CompletionFunctionCallType? = null
-    var functions: MutableList<CompletionFunction> = mutableListOf()
+    var functions: MutableList<CompletionFunction>? = null
     var maxTokens: Int? = null
-    var messages: MutableList<CompletionMessage> = mutableListOf()
+    var messages: MutableList<CompletionMessage>? = null
     var model: GroqModel? = null
     var n: Int? = null
     var parallelToolCalls: Boolean? = null
     var presencePenalty: Double? = null
     var responseFormat: CompletionResponseFormat? = null
     var seed: Int? = null
+    var stop: MutableList<String>? = null
     var stream: Boolean? = null
     var streamOptions: CompletionStreamOptions? = null
     var temperature: Double? = null
     var toolChoice: CompletionToolChoice? = null
-    var tools: MutableList<CompletionTool> = mutableListOf()
+    var tools: MutableList<CompletionTool>? = null
     var topP: Double? = null
     var user: String? = null
     
@@ -136,7 +135,11 @@ data class ChatCompletionRequest(
     }
     
     fun function(block: CompletionFunction.Builder.() -> Unit) {
-      functions.add(CompletionFunction.Builder().apply(block).build())
+      CompletionFunction.Builder().apply(block).build().apply {
+        functions?.add(this) ?: run {
+          functions = mutableListOf(this)
+        }
+      }
     }
     
     fun messages(block: ChatCompletionMessageBuilder.() -> Unit) {
@@ -144,11 +147,15 @@ data class ChatCompletionRequest(
     }
     
     fun stops(vararg sequences: String) {
-      stops = sequences.toMutableList()
+      stop = sequences.toMutableList()
     }
     
     fun tool(tool: CompletionFunction.Builder.() -> Unit) {
-      tools.add(CompletionTool(CompletionFunction.Builder().apply(tool).build()))
+      CompletionTool(CompletionFunction.Builder().apply(tool).build()).apply {
+        tools?.add(this) ?: run {
+          tools = mutableListOf(this)
+        }
+      }
     }
     
     fun build(): ChatCompletionRequest {
@@ -157,14 +164,14 @@ data class ChatCompletionRequest(
         functionCall,
         functions,
         maxTokens,
-        messages,
-        requireNotNull(model),
+        requireNotNull(messages) { "messages must be set" },
+        requireNotNull(model) { "model must be set" },
         n,
         parallelToolCalls,
         presencePenalty,
         responseFormat,
         seed,
-        stops,
+        stop,
         stream,
         streamOptions,
         temperature,
@@ -179,17 +186,17 @@ data class ChatCompletionRequest(
 
 @GroqDsl
 class ChatCompletionMessageBuilder {
-  internal var messages: MutableList<CompletionMessage> = mutableListOf()
+  var messages: MutableList<CompletionMessage> = mutableListOf()
   
-  fun system(content: String, name: String? = null) = messages.add(CompletionMessage.System(content, name))
-  fun text(content: String) = messages.add(CompletionMessage.User(UserMessageType.Text(content)))
-  fun image(image: String) = messages.add(CompletionMessage.User(UserMessageType.Array(imageContent = UserMessageImage(UserMessageImage.Image(url = image)))))
-  fun user(content: String?, image: String?, name: String? = null) = messages.add(CompletionMessage.User(UserMessageType.Array(UserMessageText(content), UserMessageImage(UserMessageImage.Image(url = image))), name))
-  fun assistant(content: String, name: String? = null, functionCall: CompletionFunctionCall? = null, toolCalls: List<CompletionToolCall>? = null) = messages.add(CompletionMessage.Assistant(content, functionCall, name, toolCalls))
-  fun tool(content: String, toolCallId: String) = messages.add(CompletionMessage.Tool(content, toolCallId))
+  fun system(content: String, name: String? = null) { messages.add(CompletionMessage.System(content, name)) }
+  fun text(content: String) { messages.add(CompletionMessage.User(UserMessageType.Text(content))) }
+  fun image(image: String) { messages.add(CompletionMessage.User(UserMessageType.Array(imageContent = UserMessageImage(UserMessageImage.Image(url = image))))) }
+  fun user(content: String?, image: String?, name: String? = null) { messages.add(CompletionMessage.User(UserMessageType.Array(UserMessageText(content), UserMessageImage(UserMessageImage.Image(url = image))), name)) }
+  fun assistant(content: String, name: String? = null, functionCall: CompletionFunctionCall? = null, toolCalls: List<CompletionToolCall>? = null) { messages.add(CompletionMessage.Assistant(content, functionCall, name, toolCalls)) }
+  fun tool(content: String, toolCallId: String) { messages.add(CompletionMessage.Tool(content, toolCallId)) }
   @Deprecated("Deprecated in the Groq API", ReplaceWith("tool"))
   @Suppress("DEPRECATION")
-  fun function(content: String, name: String) = messages.add(CompletionMessage.Function(content, name))
+  fun function(content: String, name: String) { messages.add(CompletionMessage.Function(content, name)) }
 }
 
 /**
@@ -264,7 +271,7 @@ data class CompletionFunction(
     var description: String? = null
     var parameters: JsonObject? = null
     
-    fun build() = CompletionFunction(requireNotNull(name), description, parameters)
+    fun build() = CompletionFunction(requireNotNull(name) { "function name is required" }, description, parameters)
   }
   
   companion object {
@@ -297,14 +304,18 @@ data class CompletionFunction(
 /**
  * Message object used for chat completion.
  */
-@Serializable
+@Serializable(CompletionMessage.Serializer::class)
+//@Serializable
 sealed class CompletionMessage(val role: String) {
+  constructor() : this("")
+  
   /**
    * System message
    *
    * @param content The content of the message.
    * @param name An optional name for the participant. Provides the model information to differentiate between participants of the same role.
    */
+  @Serializable
   data class System(
     val content: String,
     val name: String? = null,
@@ -316,6 +327,7 @@ sealed class CompletionMessage(val role: String) {
    * @param content The content of the message.
    * @param name An optional name for the participant. Provides the model information to differentiate between participants of the same role.
    */
+  @Serializable
   data class User(
     val content: UserMessageType,
     val name: String? = null,
@@ -329,6 +341,7 @@ sealed class CompletionMessage(val role: String) {
    * @param name An optional name for the participant. Provides the model information to differentiate between participants of the same role.
    * @param toolCalls The tool calls generated by the model, such as function calls.
    */
+  @Serializable
   data class Assistant(
     val content: String? = null,
     @Deprecated("Deprecated in the Groq API. Use `toolCalls` instead")
@@ -343,6 +356,7 @@ sealed class CompletionMessage(val role: String) {
    * @param content The content of the message.
    * @param toolCallId Tool call that this message is responding to.
    */
+  @Serializable
   data class Tool(
     val content: String,
     val toolCallId: String,
@@ -355,6 +369,7 @@ sealed class CompletionMessage(val role: String) {
    * @param name The name of the function to call.
    */
   @Deprecated("Deprecated in the Groq API")
+  @Serializable
   data class Function(
     val content: String,
     val name: String,
@@ -367,7 +382,76 @@ sealed class CompletionMessage(val role: String) {
   fun assistant(content: String, name: String? = null, functionCall: CompletionFunctionCall? = null, toolCalls: List<CompletionToolCall>? = null) = Assistant(content, functionCall, name, toolCalls)
   fun tool(content: String, toolCallId: String) = Tool(content, toolCallId)
   @Deprecated("Deprecated in the Groq API", ReplaceWith("tool"))
-  fun function(content: String, name: String? = null) = Function(content, name)
+  @Suppress("DEPRECATION")
+  fun function(content: String, name: String) = Function(content, name)
+  
+  class Serializer : KSerializer<CompletionMessage> {
+    override val descriptor = buildClassSerialDescriptor("GroqChatCompletionMessage") {
+      element<String>("role")
+      element<String>("content")
+      element<String>("name")
+      element<String>("toolCallId")
+      element<String>("functionName")
+      element<String>("toolName")
+      element<UserMessageText>("textContent")
+      element<UserMessageImage>("imageContent")
+      element<CompletionFunctionCall>("functionCall")
+      element<List<CompletionToolCall>>("toolCalls")
+    }
+    
+    @OptIn(ExperimentalSerializationApi::class)
+    @Suppress("DEPRECATION")
+    override fun serialize(encoder: Encoder, value: CompletionMessage) {
+      require(encoder is JsonEncoder)
+      val root = encoder.beginStructure(descriptor)
+      root.encodeStringElement(descriptor, 0, value.role)
+      
+      when (value) {
+        is System -> {
+          root.encodeStringElement(descriptor, 1, value.content)
+          value.name?.let { root.encodeStringElement(descriptor, 2, it) }
+        }
+        is User -> {
+          when (value.content) {
+            is UserMessageType.Text -> {
+              root.encodeStringElement(descriptor, 1, value.content.content)
+              value.name?.let { root.encodeStringElement(descriptor, 2, it) }
+            }
+            is UserMessageType.Array -> {
+              val contentArray = encoder.beginStructure(descriptor)
+              
+              contentArray.encodeNullableSerializableElement(descriptor, 6, UserMessageText.serializer(), value.content.textContent)
+              contentArray.encodeNullableSerializableElement(descriptor, 7, UserMessageImage.serializer(), value.content.imageContent)
+              
+              contentArray.endStructure(descriptor)
+              
+              value.name?.let { root.encodeStringElement(descriptor, 2, it) }
+            }
+          }
+        }
+        is Assistant -> {
+          value.content?.let { root.encodeStringElement(descriptor, 1, it) }
+          value.functionCall?.let { root.encodeSerializableElement(descriptor, 8, CompletionFunctionCall.serializer(), it) }
+          value.name?.let { root.encodeStringElement(descriptor, 2, it) }
+          value.toolCalls?.let { root.encodeSerializableElement(descriptor, 9, ListSerializer(CompletionToolCall.serializer()), it) }
+        }
+        is Tool -> {
+          root.encodeStringElement(descriptor, 1, value.content)
+          root.encodeStringElement(descriptor, 3, value.toolCallId)
+        }
+        is Function -> {
+          root.encodeStringElement(descriptor, 1, value.content)
+          root.encodeStringElement(descriptor, 2, value.name)
+        }
+      }
+      
+      root.endStructure(descriptor)
+    }
+    
+    override fun deserialize(decoder: Decoder): CompletionMessage {
+      error("Unreachable")
+    }
+  }
 }
 
 /**
@@ -380,6 +464,7 @@ sealed class UserMessageType {
    *
    * @param content The content of the message.
    */
+  @Serializable
   data class Text(val content: String) : UserMessageType()
   
   /**
@@ -388,6 +473,7 @@ sealed class UserMessageType {
    * @param textContent The text content of the message.
    * @param imageContent The image content of the message.
    */
+  @Serializable
   data class Array(val textContent: UserMessageText = UserMessageText(), val imageContent: UserMessageImage = UserMessageImage()) : UserMessageType() {
     init {
       require(textContent.type != null || imageContent.type != null) {
@@ -503,14 +589,18 @@ data class CompletionStreamOptions(
  */
 @Serializable(CompletionToolChoice.Serializer::class)
 sealed class CompletionToolChoice(val name: String) {
+  constructor() : this("auto")
+  
   /**
    * The model will not call a function and instead generates a message.
    */
+  @Serializable
   data object None : CompletionToolChoice("none")
   
   /**
    * The model can pick between generating a message or calling a function.
    */
+  @Serializable
   data object Auto : CompletionToolChoice("auto")
   
   /**
@@ -519,6 +609,7 @@ sealed class CompletionToolChoice(val name: String) {
    * @param functionName The name of the tool.
    * @param functionType The type of the tool. Currently, only `function` is supported.
    */
+  @Serializable
   data class Function(val functionName: String, val functionType: String? = "function") : CompletionToolChoice(functionName)
   
   internal companion object Serializer : KSerializer<CompletionToolChoice> {
