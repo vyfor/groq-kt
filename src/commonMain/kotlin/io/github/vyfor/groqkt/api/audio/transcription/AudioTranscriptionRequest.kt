@@ -3,7 +3,7 @@
 package io.github.vyfor.groqkt.api.audio.transcription
 
 import io.github.vyfor.groqkt.GroqModel
-import io.github.vyfor.groqkt.api.GroqDsl
+import io.github.vyfor.groqkt.api.shared.GroqDsl
 import io.github.vyfor.groqkt.api.audio.AudioResponseFormat
 
 /**
