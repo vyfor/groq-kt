@@ -383,16 +383,6 @@ sealed class CompletionMessage(val role: String) {
     val name: String,
   ) : CompletionMessage("function")
   
-  fun system(content: String, name: String? = null) = System(content, name)
-  fun text(content: String) = User(UserMessageType.Text(content))
-  fun image(image: String) = User(UserMessageType.Array(imageContent = UserMessageContent.Image(UserMessageContent.Image.ImageObject(url = image))))
-  fun user(content: String?, image: String?, name: String? = null) = User(UserMessageType.Array(UserMessageContent.Text(content), UserMessageContent.Image(UserMessageContent.Image.ImageObject(url = image))), name)
-  fun assistant(content: String, name: String? = null, functionCall: CompletionFunctionCall? = null, toolCalls: List<CompletionToolCall>? = null) = Assistant(content, functionCall, name, toolCalls)
-  fun tool(content: String, toolCallId: String) = Tool(content, toolCallId)
-  @Deprecated("Deprecated in the Groq API", ReplaceWith("tool"))
-  @Suppress("DEPRECATION")
-  fun function(content: String, name: String) = Function(content, name)
-  
   class Serializer : KSerializer<CompletionMessage> {
     override val descriptor = buildClassSerialDescriptor("GroqChatCompletionMessage") {
       element<String>("role")
@@ -464,6 +454,24 @@ sealed class CompletionMessage(val role: String) {
     override fun deserialize(decoder: Decoder): CompletionMessage {
       error("Unreachable")
     }
+  }
+
+  companion object {
+    fun system(content: String, name: String? = null) = System(content, name)
+
+    fun text(content: String) = User(UserMessageType.Text(content))
+
+    fun image(image: String) = User(UserMessageType.Array(imageContent = UserMessageContent.Image(UserMessageContent.Image.ImageObject(url = image))))
+
+    fun user(content: String?, image: String?, name: String? = null) = User(UserMessageType.Array(UserMessageContent.Text(content), UserMessageContent.Image(UserMessageContent.Image.ImageObject(url = image))), name)
+
+    fun assistant(content: String, name: String? = null, functionCall: CompletionFunctionCall? = null, toolCalls: List<CompletionToolCall>? = null) = Assistant(content, functionCall, name, toolCalls)
+
+    fun tool(content: String, toolCallId: String) = Tool(content, toolCallId)
+
+    @Deprecated("Deprecated in the Groq API", ReplaceWith("tool"))
+    @Suppress("DEPRECATION")
+    fun function(content: String, name: String) = Function(content, name)
   }
 }
 
