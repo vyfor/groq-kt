@@ -92,7 +92,7 @@ mavenPublishing {
     
     pom {
         name.set("groq-kt")
-        description.set("Kotlin Multiplatform wrapper for Groq")
+        description.set("Idiomatic Kotlin Multiplatform library for the Groq API")
         url.set("https://github.com/vyfor/groq-kt")
         inceptionYear.set("2024")
         licenses {
