@@ -10,7 +10,9 @@ import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
 
 @Serializable(ModelSerializer::class)
-enum class GroqModel(val id: String) {
+enum class GroqModel(
+    val id: String,
+) {
   DISTIL_WHISPER_LARGE_V3_EN("distil-whisper-large-v3-en"),
   GEMMA_2_9B_IT("gemma2-9b-it"),
   GEMMA_7B_IT("gemma-7b-it"),
@@ -28,20 +30,27 @@ enum class GroqModel(val id: String) {
   MIXTRAL_8X7B_32768("mixtral-8x7b-32768"),
   WHISPER_LARGE_V3("whisper-large-v3"),
   WHISPER_LARGE_V3_TURBO("whisper-large-v3-turbo"),
+
   // todo: remove after 10/28/24
-  @Deprecated("Deprecated in the Groq API", ReplaceWith("LLAMA_3_2_11B_VISION_PREVIEW"), DeprecationLevel.WARNING)
+  @Deprecated(
+      "Deprecated in the Groq API",
+      ReplaceWith("LLAMA_3_2_11B_VISION_PREVIEW"),
+      DeprecationLevel.WARNING)
   LLAVA_V1_5_7B_4096_PREVIEW("llava-v1.5-7b-4096-preview"),
 }
 
 private object ModelSerializer : KSerializer<GroqModel> {
   override val descriptor = PrimitiveSerialDescriptor("GroqModel", PrimitiveKind.STRING)
-  
+
   override fun deserialize(decoder: Decoder): GroqModel {
     val id = decoder.decodeString()
     return GroqModel.entries.firstOrNull { it.id == id } ?: error("Model '$id' is not supported")
   }
-  
-  override fun serialize(encoder: Encoder, value: GroqModel) {
+
+  override fun serialize(
+      encoder: Encoder,
+      value: GroqModel,
+  ) {
     encoder.encodeString(value.id)
   }
 }

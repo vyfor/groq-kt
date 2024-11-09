@@ -5,6 +5,6 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class XGroq(
-  val id: String,
-  val usage: ChatCompletionUsage?,
+    val id: String,
+    val usage: ChatCompletionUsage?,
 )
