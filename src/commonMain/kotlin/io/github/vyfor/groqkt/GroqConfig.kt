@@ -14,11 +14,23 @@ import kotlinx.serialization.json.ClassDiscriminatorMode
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonNamingStrategy
 
+/**
+ * Groq configuration class.
+ *
+ * @property json The JSON serializer.
+ * @property client The HTTP client.
+ */
 data class GroqConfig(
     val json: Json,
     val client: HttpClient,
 )
 
+/**
+ * Groq configuration builder class.
+ *
+ * @param apiKey The Groq API key obtained from [here](https://console.groq.com/keys).
+ * @property client The HTTP client. Do not modify unless you know what you're doing.
+ */
 class GroqConfigBuilder(
     apiKey: String,
 ) {
@@ -66,7 +78,7 @@ class GroqConfigBuilder(
             }
         }
 
-    fun build(): GroqConfig =
+    internal fun build(): GroqConfig =
         GroqConfig(
             json,
             client,
