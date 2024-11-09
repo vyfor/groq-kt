@@ -17,14 +17,13 @@ import kotlinx.serialization.Serializable
  */
 @Serializable
 data class ChatCompletion(
-  val id: String,
-  @SerialName("object")
-  val obj: String,
-  val created: Long,
-  val model: GroqModel,
-  val choices: List<ChatCompletionChoice>,
-  val usage: ChatCompletionUsage?,
-  val systemFingerprint: String? = null,
+    val id: String,
+    @SerialName("object") val obj: String,
+    val created: Long,
+    val model: GroqModel,
+    val choices: List<ChatCompletionChoice>,
+    val usage: ChatCompletionUsage?,
+    val systemFingerprint: String? = null,
 )
 
 /**
@@ -40,14 +39,13 @@ data class ChatCompletion(
  */
 @Serializable
 data class StreamingChatCompletion(
-  val id: String,
-  @SerialName("object")
-  val obj: String,
-  val created: Long,
-  val model: GroqModel,
-  val choices: List<StreamingChatCompletionChoice>,
-  val usage: ChatCompletionUsage?,
-  val systemFingerprint: String? = null,
+    val id: String,
+    @SerialName("object") val obj: String,
+    val created: Long,
+    val model: GroqModel,
+    val choices: List<StreamingChatCompletionChoice>,
+    val usage: ChatCompletionUsage?,
+    val systemFingerprint: String? = null,
 )
 
 /**
@@ -59,9 +57,9 @@ data class StreamingChatCompletion(
  */
 @Serializable
 data class ChatCompletionChoice(
-  val index: Int,
-  val message: ChatCompletionMessage,
-  val finishReason: String,
+    val index: Int,
+    val message: ChatCompletionMessage,
+    val finishReason: String,
 )
 
 /**
@@ -72,8 +70,8 @@ data class ChatCompletionChoice(
  */
 @Serializable
 data class ChatCompletionMessage(
-  val role: String,
-  val content: String,
+    val role: String,
+    val content: String,
 )
 
 /**
@@ -85,9 +83,9 @@ data class ChatCompletionMessage(
  */
 @Serializable
 data class StreamingChatCompletionChoice(
-  val index: Int,
-  val delta: ChatCompletionDelta,
-  val finishReason: String?,
+    val index: Int,
+    val delta: ChatCompletionDelta,
+    val finishReason: String?,
 )
 
 /**
@@ -98,8 +96,8 @@ data class StreamingChatCompletionChoice(
  */
 @Serializable
 data class ChatCompletionDelta(
-  val role: String?,
-  val content: String?,
+    val role: String?,
+    val content: String?,
 )
 
 /**
@@ -115,11 +113,11 @@ data class ChatCompletionDelta(
  */
 @Serializable
 data class ChatCompletionUsage(
-  val promptTokens: Int,
-  val completionTokens: Int,
-  val totalTokens: Int,
-  val queueTime: Double?,
-  val promptTime: Double?,
-  val completionTime: Double?,
-  val totalTime: Double?,
+    val promptTokens: Int,
+    val completionTokens: Int,
+    val totalTokens: Int,
+    val queueTime: Double?,
+    val promptTime: Double?,
+    val completionTime: Double?,
+    val totalTime: Double?,
 )

@@ -5,7 +5,6 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class Models(
-  @SerialName("object")
-  val obj: String,
-  val data: List<Model>,
+    @SerialName("object") val obj: String,
+    val data: List<Model>,
 )

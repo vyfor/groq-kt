@@ -34,53 +34,49 @@ data class GroqConfig(
 class GroqConfigBuilder(
     apiKey: String,
 ) {
-    @OptIn(ExperimentalSerializationApi::class)
-    private val json: Json =
-        Json {
-            explicitNulls = false
-            encodeDefaults = true
-            ignoreUnknownKeys = true
-            namingStrategy = JsonNamingStrategy.SnakeCase
-            classDiscriminatorMode = ClassDiscriminatorMode.NONE
+  @OptIn(ExperimentalSerializationApi::class)
+  private val json: Json = Json {
+    explicitNulls = false
+    encodeDefaults = true
+    ignoreUnknownKeys = true
+    namingStrategy = JsonNamingStrategy.SnakeCase
+    classDiscriminatorMode = ClassDiscriminatorMode.NONE
+  }
+  var client: HttpClient = HttpClient {
+    install(ContentNegotiation) { json(json) }
+
+    install(HttpRequestRetry) {
+      retryIf(1) { _, response ->
+        when (response.status.value) {
+          // retry on server errors
+          in 500..599 -> {
+            constantDelay()
+            true
+          }
+
+          // handle ratelimits (retry-after)
+          HttpStatusCode.TooManyRequests.value -> {
+            constantDelay(
+                response.headers["retry-after"]?.toLongOrNull()?.times(1000) ?: 0,
+                0,
+                false,
+            )
+            true
+          }
+          else -> false
         }
-    var client: HttpClient =
-        HttpClient {
-            install(ContentNegotiation) {
-                json(json)
-            }
+      }
+    }
 
-            install(HttpRequestRetry) {
-                retryIf(1) { _, response ->
-                    when (response.status.value) {
-                        // retry on server errors
-                        in 500..599 -> {
-                            constantDelay()
-                            true
-                        }
+    install(DefaultRequest) {
+      url(BASE_URL)
+      header("Authorization", "Bearer $apiKey")
+    }
+  }
 
-                        // handle ratelimits (retry-after)
-                        HttpStatusCode.TooManyRequests.value -> {
-                            constantDelay(
-                                response.headers["retry-after"]?.toLongOrNull()?.times(1000) ?: 0,
-                                0,
-                                false,
-                            )
-                            true
-                        }
-                        else -> false
-                    }
-                }
-            }
-
-            install(DefaultRequest) {
-                url(BASE_URL)
-                header("Authorization", "Bearer $apiKey")
-            }
-        }
-
-    internal fun build(): GroqConfig =
-        GroqConfig(
-            json,
-            client,
-        )
+  internal fun build(): GroqConfig =
+      GroqConfig(
+          json,
+          client,
+      )
 }

@@ -5,7 +5,8 @@ import kotlinx.serialization.Serializable
 /**
  * Audio transcription object.
  *
- * Nullable fields are only present with [io.github.vyfor.groqkt.api.audio.AudioResponseFormat.VERBOSE_JSON] response format.
+ * Nullable fields are only present with
+ * [io.github.vyfor.groqkt.api.audio.AudioResponseFormat.VERBOSE_JSON] response format.
  *
  * @param text The transcribed text.
  * @param duration The duration of the audio in seconds.
@@ -15,11 +16,11 @@ import kotlinx.serialization.Serializable
  */
 @Serializable
 data class AudioTranscription(
-  val text: String,
-  val duration: Double?,
-  val language: String?,
-  val segments: List<TranscriptionSegment>?,
-  val task: String?,
+    val text: String,
+    val duration: Double?,
+    val language: String?,
+    val segments: List<TranscriptionSegment>?,
+    val task: String?,
 )
 
 /**
@@ -38,14 +39,14 @@ data class AudioTranscription(
  */
 @Serializable
 data class TranscriptionSegment(
-  val avgLogprob: Double,
-  val compressionRatio: Double,
-  val end: Double,
-  val id: Int,
-  val noSpeechProb: Double,
-  val seek: Double,
-  val start: Double,
-  val temperature: Double,
-  val text: String,
-  val tokens: List<Int>,
+    val avgLogprob: Double,
+    val compressionRatio: Double,
+    val end: Double,
+    val id: Int,
+    val noSpeechProb: Double,
+    val seek: Double,
+    val start: Double,
+    val temperature: Double,
+    val text: String,
+    val tokens: List<Int>,
 )
