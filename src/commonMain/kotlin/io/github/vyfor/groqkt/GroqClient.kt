@@ -2,9 +2,6 @@
 
 package io.github.vyfor.groqkt
 
-import io.github.vyfor.groqkt.api.GroqRatelimit
-import io.github.vyfor.groqkt.api.GroqResponse
-import io.github.vyfor.groqkt.api.GroqResponseType
 import io.github.vyfor.groqkt.api.GroqStreamingResponse
 import io.github.vyfor.groqkt.api.audio.transcription.AudioTranscription
 import io.github.vyfor.groqkt.api.audio.transcription.AudioTranscriptionRequest
@@ -15,24 +12,21 @@ import io.github.vyfor.groqkt.api.chat.ChatCompletionRequest
 import io.github.vyfor.groqkt.api.chat.StreamingChatCompletion
 import io.github.vyfor.groqkt.api.model.Model
 import io.github.vyfor.groqkt.api.model.Models
-import io.ktor.client.call.*
-import io.ktor.client.plugins.*
+import io.github.vyfor.groqkt.util.parse
+import io.github.vyfor.groqkt.util.parseHeaders
+import io.github.vyfor.groqkt.util.validate
 import io.ktor.client.request.*
 import io.ktor.client.request.forms.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.ktor.utils.io.*
-import kotlin.time.Duration
-import kotlin.time.Duration.Companion.milliseconds
-import kotlin.time.Duration.Companion.minutes
-import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
-import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.*
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.buildJsonArray
 
 /**
  * A client used to interact with the Groq API.
@@ -77,7 +71,8 @@ class GroqClient(
                       block()
                       stream = false
                     }
-                    .build())
+                    .build(),
+            )
           }
           .parse<ChatCompletion>()
 
@@ -102,13 +97,14 @@ class GroqClient(
                           val line =
                               readUTF8Line()?.removePrefix("data: ")?.takeIf { it.startsWith("{") }
                                   ?: continue
-                          val chunk = json.decodeFromString<StreamingChatCompletion>(line)
+                          val chunk = config.json.decodeFromString<StreamingChatCompletion>(line)
                           emit(Result.success(chunk))
                         }
                       }
                     }
                     .flowOn(Dispatchers.Default)
-                    .catch { e -> emit(Result.failure(e)) })
+                    .catch { e -> emit(Result.failure(e)) },
+            )
           }
 
   /**
@@ -127,7 +123,8 @@ class GroqClient(
                       block()
                       stream = true
                     }
-                    .build())
+                    .build(),
+            )
           }
           .run {
             GroqStreamingResponse(
@@ -138,13 +135,14 @@ class GroqClient(
                           val line =
                               readUTF8Line()?.removePrefix("data: ")?.takeIf { it.startsWith("{") }
                                   ?: continue
-                          val chunk = json.decodeFromString<StreamingChatCompletion>(line)
+                          val chunk = config.json.decodeFromString<StreamingChatCompletion>(line)
                           emit(Result.success(chunk))
                         }
                       }
                     }
                     .flowOn(Dispatchers.Default)
-                    .catch { e -> emit(Result.failure(e)) })
+                    .catch { e -> emit(Result.failure(e)) },
+            )
           }
 
   /**
@@ -165,14 +163,16 @@ class GroqClient(
                       append(
                           HttpHeaders.ContentDisposition,
                           "filename=\"${data.filename.encodeURLPathPart()}\"")
-                    })
+                    },
+                )
                 append("model", data.model.id)
                 data.prompt?.let { append("prompt", it) }
                 data.responseFormat?.let { append("response_format", it.name) }
                 data.temperature?.let { append("temperature", it.toString()) }
-              }) {
-                contentType(ContentType.MultiPart.FormData)
-              }
+              },
+          ) {
+            contentType(ContentType.MultiPart.FormData)
+          }
           .parse<AudioTranslation>()
 
   /**
@@ -194,15 +194,17 @@ class GroqClient(
                         append(
                             HttpHeaders.ContentDisposition,
                             "filename=\"${data.filename.encodeURLPathPart()}\"")
-                      })
+                      },
+                  )
                   append("model", data.model.id)
                   data.prompt?.let { append("prompt", it) }
                   data.responseFormat?.let { append("response_format", it.name) }
                   data.temperature?.let { append("temperature", it.toString()) }
                 }
-              }) {
-                contentType(ContentType.MultiPart.FormData)
-              }
+              },
+          ) {
+            contentType(ContentType.MultiPart.FormData)
+          }
           .parse<AudioTranslation>()
 
   /**
@@ -224,7 +226,8 @@ class GroqClient(
                         append(
                             HttpHeaders.ContentDisposition,
                             "filename=\"${data.filename.encodeURLPathPart()}\"")
-                      })
+                      },
+                  )
                 }
                 append("model", data.model.id)
                 data.language?.let { append("language", it) }
@@ -234,13 +237,16 @@ class GroqClient(
                 data.timestampGranularities?.let {
                   append(
                       "timestamp_granularities",
-                      json.encodeToString(
+                      config.json.encodeToString(
                           buildJsonArray { it.forEach { enum -> add(JsonPrimitive(enum.value)) } }
-                              .toString()))
+                              .toString(),
+                      ),
+                  )
                 }
-              }) {
-                contentType(ContentType.MultiPart.FormData)
-              }
+              },
+          ) {
+            contentType(ContentType.MultiPart.FormData)
+          }
           .parse<AudioTranscription>()
 
   /**
@@ -263,7 +269,8 @@ class GroqClient(
                           append(
                               HttpHeaders.ContentDisposition,
                               "filename=\"${data.filename.encodeURLPathPart()}\"")
-                        })
+                        },
+                    )
                   }
                   append("model", data.model.id)
                   data.url?.let { append("url", it) }
@@ -274,14 +281,17 @@ class GroqClient(
                   data.timestampGranularities?.let {
                     append(
                         "timestamp_granularities",
-                        json.encodeToString(
+                        config.json.encodeToString(
                             buildJsonArray { it.forEach { enum -> add(JsonPrimitive(enum.value)) } }
-                                .toString()))
+                                .toString(),
+                        ),
+                    )
                   }
                 }
-              }) {
-                contentType(ContentType.MultiPart.FormData)
-              }
+              },
+          ) {
+            contentType(ContentType.MultiPart.FormData)
+          }
           .parse<AudioTranscription>()
 
   /**
@@ -313,77 +323,5 @@ class GroqClient(
 
   companion object {
     const val BASE_URL: String = "https://api.groq.com/openai/v1/"
-    @OptIn(ExperimentalSerializationApi::class)
-    private val json: Json = Json {
-      explicitNulls = false
-      encodeDefaults = true
-      ignoreUnknownKeys = true
-      namingStrategy = JsonNamingStrategy.SnakeCase
-      classDiscriminatorMode = ClassDiscriminatorMode.NONE
-    }
-
-    private suspend inline fun <reified T> HttpResponse.validate(): Result<T> {
-      return if (status.isSuccess()) Result.success(body<T>())
-      else Result.failure(ResponseException(this, status.description))
-    }
-
-    private suspend inline fun <reified T, R> HttpResponse.validate(block: T.() -> R): Result<R> {
-      return if (status.isSuccess()) Result.success(block(body<T>()))
-      else Result.failure(ResponseException(this, status.description))
-    }
-
-    private suspend inline fun <reified T> HttpResponse.parse(): Result<GroqResponse<T>> {
-      return when (val result = body<GroqResponseType<T>>()) {
-        is GroqResponseType.Ok ->
-            Result.success(
-                GroqResponse(data = result.data, xGroq = result.xGroq).apply {
-                  ratelimit = parseHeaders()
-                })
-        is GroqResponseType.Error -> Result.failure(result.error)
-      }
-    }
-
-    private fun HttpResponse.parseHeaders(): GroqRatelimit? {
-      val limitRequests = headers["x-ratelimit-limit-requests"]?.toIntOrNull()
-      val limitTokens = headers["x-ratelimit-limit-tokens"]?.toIntOrNull()
-      val remainingRequests = headers["x-ratelimit-remaining-requests"]?.toIntOrNull()
-      val remainingTokens = headers["x-ratelimit-remaining-tokens"]?.toIntOrNull()
-      val resetRequests = headers["x-ratelimit-reset-requests"]?.parseDuration()
-      val resetTokens = headers["x-ratelimit-reset-tokens"]?.parseDuration()
-
-      return limitRequests?.let {
-        GroqRatelimit(
-            limitRequests = limitRequests,
-            limitTokens = limitTokens ?: -1,
-            remainingRequests = remainingRequests ?: -1,
-            remainingTokens = remainingTokens ?: -1,
-            resetRequests = resetRequests ?: Duration.INFINITE,
-            resetTokens = resetTokens ?: Duration.INFINITE)
-      }
-    }
-
-    private fun String.parseDuration(): Duration {
-      return when {
-        /* 123ms */
-        contains("ms") -> {
-          val millis = substring(0, length - 2).toLongOrNull()
-          millis?.milliseconds ?: Duration.ZERO
-        }
-        /* 1m2.34s */
-        contains("m") && contains("s") -> {
-          val mins = substringBefore("m").toLongOrNull()
-          val secs = substringAfter("m").substringBefore("s").toDoubleOrNull()
-          mins?.minutes?.let { secs?.seconds?.plus(it) } ?: Duration.ZERO
-        }
-        /* 1s */
-        contains("s") -> {
-          val secs = replace("s", "").toDoubleOrNull()
-          secs?.seconds ?: Duration.ZERO
-        }
-        else -> {
-          Duration.ZERO
-        }
-      }
-    }
   }
 }
