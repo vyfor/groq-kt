@@ -1,4 +1,4 @@
-@file:Suppress("unused")
+@file:Suppress("unused", "NAME_SHADOWING")
 
 package io.github.vyfor.groqkt.util
 
@@ -13,6 +13,9 @@ import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
+
+internal inline fun <reified T> T.applyDefaults(noinline defaults: (T.() -> Unit)?): T =
+    defaults?.let { defaults -> apply(defaults) } ?: this
 
 internal suspend inline fun <reified T> HttpResponse.validate(): Result<T> =
     if (status.isSuccess()) {

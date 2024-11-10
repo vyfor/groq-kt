@@ -32,12 +32,16 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class AudioTranslationRequest(
     val file: ByteArray,
-    val model: GroqModel,
+    val model: GroqModel?,
     val prompt: String? = null,
     val responseFormat: AudioResponseFormat? = null,
     val temperature: Double? = null,
 ) {
   var filename: String = "audio.mp3"
+
+  init {
+    require(model != null) { "model must be set" }
+  }
 
   companion object {
     const val ENDPOINT = "audio/translations"
@@ -103,7 +107,7 @@ data class AudioTranslationRequest(
     fun build(): AudioTranslationRequest {
       return AudioTranslationRequest(
               requireNotNull(file) { "file must be set" },
-              requireNotNull(model) { "model must be set" },
+              model,
               prompt,
               responseFormat,
               temperature,

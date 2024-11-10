@@ -12,6 +12,7 @@ import io.github.vyfor.groqkt.api.chat.ChatCompletionRequest
 import io.github.vyfor.groqkt.api.chat.StreamingChatCompletion
 import io.github.vyfor.groqkt.api.model.Model
 import io.github.vyfor.groqkt.api.model.Models
+import io.github.vyfor.groqkt.util.applyDefaults
 import io.github.vyfor.groqkt.util.parse
 import io.github.vyfor.groqkt.util.parseHeaders
 import io.github.vyfor.groqkt.util.validate
@@ -67,6 +68,7 @@ class GroqClient(
             contentType(ContentType.Application.Json)
             setBody(
                 ChatCompletionRequest.Builder()
+                    .applyDefaults(config.defaults?.chatCompletion)
                     .apply {
                       block()
                       stream = false
@@ -119,6 +121,7 @@ class GroqClient(
             contentType(ContentType.Application.Json)
             setBody(
                 ChatCompletionRequest.Builder()
+                    .applyDefaults(config.defaults?.chatCompletion)
                     .apply {
                       block()
                       stream = true
@@ -165,7 +168,7 @@ class GroqClient(
                           "filename=\"${data.filename.encodeURLPathPart()}\"")
                     },
                 )
-                append("model", data.model.id)
+                append("model", data.model!!.id)
                 data.prompt?.let { append("prompt", it) }
                 data.responseFormat?.let { append("response_format", it.name) }
                 data.temperature?.let { append("temperature", it.toString()) }
@@ -186,21 +189,25 @@ class GroqClient(
           .submitFormWithBinaryData(
               AudioTranslationRequest.ENDPOINT,
               formData {
-                AudioTranslationRequest.Builder().apply(block).build().let { data ->
-                  append(
-                      "file",
-                      data.file,
-                      Headers.build {
-                        append(
-                            HttpHeaders.ContentDisposition,
-                            "filename=\"${data.filename.encodeURLPathPart()}\"")
-                      },
-                  )
-                  append("model", data.model.id)
-                  data.prompt?.let { append("prompt", it) }
-                  data.responseFormat?.let { append("response_format", it.name) }
-                  data.temperature?.let { append("temperature", it.toString()) }
-                }
+                AudioTranslationRequest.Builder()
+                    .applyDefaults(config.defaults?.audioTranslation)
+                    .apply(block)
+                    .build()
+                    .let { data ->
+                      append(
+                          "file",
+                          data.file,
+                          Headers.build {
+                            append(
+                                HttpHeaders.ContentDisposition,
+                                "filename=\"${data.filename.encodeURLPathPart()}\"")
+                          },
+                      )
+                      append("model", data.model!!.id)
+                      data.prompt?.let { append("prompt", it) }
+                      data.responseFormat?.let { append("response_format", it.name) }
+                      data.temperature?.let { append("temperature", it.toString()) }
+                    }
               },
           ) {
             contentType(ContentType.MultiPart.FormData)
@@ -229,7 +236,7 @@ class GroqClient(
                       },
                   )
                 }
-                append("model", data.model.id)
+                append("model", data.model!!.id)
                 data.language?.let { append("language", it) }
                 data.prompt?.let { append("prompt", it) }
                 data.responseFormat?.let { append("response_format", it.name) }
@@ -260,34 +267,40 @@ class GroqClient(
           .submitFormWithBinaryData(
               AudioTranscriptionRequest.ENDPOINT,
               formData {
-                AudioTranscriptionRequest.Builder().apply(block).build().let { data ->
-                  data.file?.let {
-                    append(
-                        "file",
-                        it,
-                        Headers.build {
-                          append(
-                              HttpHeaders.ContentDisposition,
-                              "filename=\"${data.filename.encodeURLPathPart()}\"")
-                        },
-                    )
-                  }
-                  append("model", data.model.id)
-                  data.url?.let { append("url", it) }
-                  data.language?.let { append("language", it) }
-                  data.prompt?.let { append("prompt", it) }
-                  data.responseFormat?.let { append("response_format", it.name) }
-                  data.temperature?.let { append("temperature", it.toString()) }
-                  data.timestampGranularities?.let {
-                    append(
-                        "timestamp_granularities",
-                        config.json.encodeToString(
-                            buildJsonArray { it.forEach { enum -> add(JsonPrimitive(enum.value)) } }
-                                .toString(),
-                        ),
-                    )
-                  }
-                }
+                AudioTranscriptionRequest.Builder()
+                    .applyDefaults(config.defaults?.audioTranscription)
+                    .apply(block)
+                    .build()
+                    .let { data ->
+                      data.file?.let {
+                        append(
+                            "file",
+                            it,
+                            Headers.build {
+                              append(
+                                  HttpHeaders.ContentDisposition,
+                                  "filename=\"${data.filename.encodeURLPathPart()}\"")
+                            },
+                        )
+                      }
+                      append("model", data.model!!.id)
+                      data.url?.let { append("url", it) }
+                      data.language?.let { append("language", it) }
+                      data.prompt?.let { append("prompt", it) }
+                      data.responseFormat?.let { append("response_format", it.name) }
+                      data.temperature?.let { append("temperature", it.toString()) }
+                      data.timestampGranularities?.let {
+                        append(
+                            "timestamp_granularities",
+                            config.json.encodeToString(
+                                buildJsonArray {
+                                      it.forEach { enum -> add(JsonPrimitive(enum.value)) }
+                                    }
+                                    .toString(),
+                            ),
+                        )
+                      }
+                    }
               },
           ) {
             contentType(ContentType.MultiPart.FormData)
