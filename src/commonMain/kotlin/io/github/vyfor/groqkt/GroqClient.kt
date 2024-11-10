@@ -37,7 +37,7 @@ import kotlinx.serialization.json.buildJsonArray
 @Suppress("MemberVisibilityCanBePrivate")
 class GroqClient(
     apiKey: String,
-    config: (GroqConfigBuilder.() -> Unit) = {},
+    config: GroqConfigBuilder.() -> Unit = {},
 ) : AutoCloseable {
   private val config = GroqConfigBuilder(apiKey).apply(config).build()
 
