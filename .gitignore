@@ -41,3 +41,5 @@ bin/
 .DS_Store
 
 kls_database.db
+
+src/jvmTest/
