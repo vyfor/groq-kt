@@ -6,7 +6,6 @@ import io.github.vyfor.groqkt.GroqModel
 import io.github.vyfor.groqkt.api.chat.CompletionFunctionCallType.Auto
 import io.github.vyfor.groqkt.api.chat.CompletionFunctionCallType.None
 import io.github.vyfor.groqkt.api.chat.CompletionResponseFormatType.JSON_OBJECT
-import io.github.vyfor.groqkt.api.chat.CompletionToolChoice.*
 import io.github.vyfor.groqkt.api.chat.UserMessageContent.Image
 import io.github.vyfor.groqkt.api.chat.UserMessageContent.Image.ImageObject
 import io.github.vyfor.groqkt.api.chat.UserMessageContent.Text
@@ -173,11 +172,11 @@ data class ChatCompletionRequest(
     var user: String? = null
 
     fun noFunctionCalls() {
-      functionCall = CompletionFunctionCallType.None
+      functionCall = None
     }
 
     fun autoFunctionCalls() {
-      functionCall = CompletionFunctionCallType.Auto
+      functionCall = Auto
     }
 
     fun functionCall(name: String) {
@@ -246,15 +245,15 @@ class ChatCompletionMessageBuilder {
         CompletionMessage.User(
             UserMessageType.Array(
                 imageContent =
-                    UserMessageContent.Image(UserMessageContent.Image.ImageObject(url = image)))))
+                    Image(ImageObject(url = image)))))
   }
 
   fun user(content: String?, image: String?, name: String? = null) {
     messages.add(
         CompletionMessage.User(
             UserMessageType.Array(
-                UserMessageContent.Text(content),
-                UserMessageContent.Image(UserMessageContent.Image.ImageObject(url = image))),
+                Text(content),
+                Image(ImageObject(url = image))),
             name))
   }
 
@@ -472,8 +471,8 @@ sealed class CompletionMessage(val role: String) {
           element<String>("toolCallId")
           element<String>("functionName")
           element<String>("toolName")
-          element<UserMessageContent.Text>("textContent")
-          element<UserMessageContent.Image>("imageContent")
+          element<Text>("textContent")
+          element<Image>("imageContent")
           element<CompletionFunctionCall>("functionCall")
           element<List<CompletionToolCall>>("toolCalls")
         }
@@ -548,13 +547,13 @@ sealed class CompletionMessage(val role: String) {
         User(
             UserMessageType.Array(
                 imageContent =
-                    UserMessageContent.Image(UserMessageContent.Image.ImageObject(url = image))))
+                    Image(ImageObject(url = image))))
 
     fun user(content: String?, image: String?, name: String? = null) =
         User(
             UserMessageType.Array(
-                UserMessageContent.Text(content),
-                UserMessageContent.Image(UserMessageContent.Image.ImageObject(url = image))),
+                Text(content),
+                Image(ImageObject(url = image))),
             name)
 
     fun assistant(
@@ -590,8 +589,8 @@ sealed class UserMessageType {
    */
   @Serializable
   data class Array(
-      val textContent: UserMessageContent.Text = UserMessageContent.Text(),
-      val imageContent: UserMessageContent.Image = UserMessageContent.Image()
+      val textContent: UserMessageContent.Text = Text(),
+      val imageContent: Image = Image()
   ) : UserMessageType() {
     init {
       require(textContent.type != null || imageContent.type != null) {
