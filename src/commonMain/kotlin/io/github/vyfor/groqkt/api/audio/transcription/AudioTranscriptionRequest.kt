@@ -40,7 +40,7 @@ data class AudioTranscriptionRequest(
     val file: ByteArray? = null,
     val url: String? = null,
     val language: String? = null,
-    val model: GroqModel,
+    val model: GroqModel?,
     val prompt: String? = null,
     val responseFormat: AudioResponseFormat? = null,
     val temperature: Double? = null,
@@ -49,6 +49,7 @@ data class AudioTranscriptionRequest(
   var filename: String = "audio.mp3"
 
   init {
+    require(model != null) { "model must be set" }
     require(file != null || url != null) { "either file or url must be set" }
   }
 
@@ -130,7 +131,7 @@ data class AudioTranscriptionRequest(
                 file,
                 url,
                 language,
-                requireNotNull(model) { "model must be set" },
+                model,
                 prompt,
                 responseFormat,
                 temperature,

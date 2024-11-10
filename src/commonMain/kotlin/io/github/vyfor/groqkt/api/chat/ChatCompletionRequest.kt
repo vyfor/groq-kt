@@ -74,7 +74,7 @@ data class ChatCompletionRequest(
     /* val logprobs: Boolean? = null, */
     val maxTokens: Int? = null,
     val messages: List<CompletionMessage>,
-    val model: GroqModel,
+    val model: GroqModel?,
     val n: Int? = null,
     val parallelToolCalls: Boolean? = null,
     var presencePenalty: Double? = null,
@@ -96,9 +96,10 @@ data class ChatCompletionRequest(
   }
 
   init {
-    require(n == null || n == 1) { "Currently only n = 1 is supported." }
+    require(model != null) { "model must be set" }
+    require(n == null || n == 1) { "currently only n = 1 is supported." }
     require(streamOptions == null || stream == true) { "streamOptions must have stream = true." }
-    require(tools == null || tools.size <= 128) { "Currently only up to 128 tools are supported." }
+    require(tools == null || tools.size <= 128) { "currently only up to 128 tools are supported." }
     require(messages.isNotEmpty()) { "messages must not be empty." }
     presencePenalty = presencePenalty?.coerceIn(-2.0, 2.0)
     temperature = temperature?.coerceIn(-2.0, 2.0)
@@ -210,7 +211,7 @@ data class ChatCompletionRequest(
           functions,
           maxTokens,
           requireNotNull(messages) { "messages must be set" },
-          requireNotNull(model) { "model must be set" },
+          model,
           n,
           parallelToolCalls,
           presencePenalty,
@@ -243,18 +244,13 @@ class ChatCompletionMessageBuilder {
   fun image(image: String) {
     messages.add(
         CompletionMessage.User(
-            UserMessageType.Array(
-                imageContent =
-                    Image(ImageObject(url = image)))))
+            UserMessageType.Array(imageContent = Image(ImageObject(url = image)))))
   }
 
   fun user(content: String?, image: String?, name: String? = null) {
     messages.add(
         CompletionMessage.User(
-            UserMessageType.Array(
-                Text(content),
-                Image(ImageObject(url = image))),
-            name))
+            UserMessageType.Array(Text(content), Image(ImageObject(url = image))), name))
   }
 
   fun assistant(
@@ -544,17 +540,10 @@ sealed class CompletionMessage(val role: String) {
     fun text(content: String) = User(UserMessageType.Text(content))
 
     fun image(image: String) =
-        User(
-            UserMessageType.Array(
-                imageContent =
-                    Image(ImageObject(url = image))))
+        User(UserMessageType.Array(imageContent = Image(ImageObject(url = image))))
 
     fun user(content: String?, image: String?, name: String? = null) =
-        User(
-            UserMessageType.Array(
-                Text(content),
-                Image(ImageObject(url = image))),
-            name)
+        User(UserMessageType.Array(Text(content), Image(ImageObject(url = image))), name)
 
     fun assistant(
         content: String,
