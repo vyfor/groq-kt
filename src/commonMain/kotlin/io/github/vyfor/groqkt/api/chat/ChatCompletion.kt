@@ -73,7 +73,7 @@ data class ChatCompletionChoice(
 @Serializable
 data class ChatCompletionMessage(
     val role: String,
-    val content: String,
+    val content: String?,
     val toolCalls: List<CompletionToolCall>?,
     val functionCall: CompletionFunctionCall?,
 )
