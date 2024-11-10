@@ -6,7 +6,6 @@ import io.github.vyfor.groqkt.GroqModel
 import io.github.vyfor.groqkt.api.chat.CompletionFunctionCallType.Auto
 import io.github.vyfor.groqkt.api.chat.CompletionFunctionCallType.None
 import io.github.vyfor.groqkt.api.chat.CompletionResponseFormatType.JSON_OBJECT
-import io.github.vyfor.groqkt.api.chat.CompletionToolChoice.*
 import io.github.vyfor.groqkt.api.chat.UserMessageContent.Image
 import io.github.vyfor.groqkt.api.chat.UserMessageContent.Image.ImageObject
 import io.github.vyfor.groqkt.api.chat.UserMessageContent.Text
