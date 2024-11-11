@@ -21,6 +21,7 @@ import io.ktor.client.request.forms.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.ktor.utils.io.*
+import kotlin.coroutines.CoroutineContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.flow
@@ -81,10 +82,14 @@ class GroqClient(
   /**
    * Stream a model response for the given chat conversation.
    *
+   * @param coroutineContext The coroutine context to use for the flow
    * @param data The chat completion request
    * @return GroqStreamingResponse<StreamingChatCompletion>
    */
-  suspend fun chatStreaming(data: ChatCompletionRequest) =
+  suspend fun chatStreaming(
+      coroutineContext: CoroutineContext = Dispatchers.Default,
+      data: ChatCompletionRequest
+  ) =
       config.client
           .post(ChatCompletionRequest.ENDPOINT) {
             contentType(ContentType.Application.Json)
@@ -104,7 +109,7 @@ class GroqClient(
                         }
                       }
                     }
-                    .flowOn(Dispatchers.Default)
+                    .flowOn(coroutineContext)
                     .catch { e -> emit(Result.failure(e)) },
             )
           }
@@ -112,10 +117,14 @@ class GroqClient(
   /**
    * Stream a model response for the given chat conversation.
    *
+   * @param coroutineContext The coroutine context to use for the flow
    * @param block The chat completion request
    * @return GroqStreamingResponse<StreamingChatCompletion>
    */
-  suspend fun chatStreaming(block: ChatCompletionRequest.Builder.() -> Unit) =
+  suspend fun chatStreaming(
+      coroutineContext: CoroutineContext = Dispatchers.Default,
+      block: ChatCompletionRequest.Builder.() -> Unit
+  ) =
       config.client
           .post(ChatCompletionRequest.ENDPOINT) {
             contentType(ContentType.Application.Json)
@@ -143,7 +152,7 @@ class GroqClient(
                         }
                       }
                     }
-                    .flowOn(Dispatchers.Default)
+                    .flowOn(coroutineContext)
                     .catch { e -> emit(Result.failure(e)) },
             )
           }
