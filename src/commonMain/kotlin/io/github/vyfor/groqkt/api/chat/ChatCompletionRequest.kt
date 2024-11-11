@@ -5,7 +5,6 @@ package io.github.vyfor.groqkt.api.chat
 import io.github.vyfor.groqkt.GroqModel
 import io.github.vyfor.groqkt.api.chat.CompletionFunctionCallType.Auto
 import io.github.vyfor.groqkt.api.chat.CompletionFunctionCallType.None
-import io.github.vyfor.groqkt.api.chat.CompletionResponseFormatType.JSON_OBJECT
 import io.github.vyfor.groqkt.api.chat.UserMessageContent.Image
 import io.github.vyfor.groqkt.api.chat.UserMessageContent.Image.ImageObject
 import io.github.vyfor.groqkt.api.chat.UserMessageContent.Text
@@ -234,23 +233,19 @@ class ChatCompletionMessageBuilder {
   var messages: MutableList<CompletionMessage> = mutableListOf()
 
   fun system(content: String, name: String? = null) {
-    messages.add(CompletionMessage.System(content, name))
+    messages.add(CompletionMessage.system(content, name))
   }
 
-  fun text(content: String) {
-    messages.add(CompletionMessage.User(UserMessageType.Text(content)))
+  fun text(content: String, name: String? = null) {
+    messages.add(CompletionMessage.text(content, name))
   }
 
-  fun image(image: String) {
-    messages.add(
-        CompletionMessage.User(
-            UserMessageType.Array(imageContent = Image(ImageObject(url = image)))))
+  fun image(image: String, name: String? = null) {
+    messages.add(CompletionMessage.image(image, name))
   }
 
-  fun user(content: String?, image: String?, name: String? = null) {
-    messages.add(
-        CompletionMessage.User(
-            UserMessageType.Array(Text(content), Image(ImageObject(url = image))), name))
+  fun user(content: String?, image: String? = null, name: String? = null) {
+    messages.add(CompletionMessage.user(content, image, name))
   }
 
   fun assistant(
@@ -259,17 +254,17 @@ class ChatCompletionMessageBuilder {
       functionCall: CompletionFunctionCall? = null,
       toolCalls: List<CompletionToolCall>? = null
   ) {
-    messages.add(CompletionMessage.Assistant(content, functionCall, name, toolCalls))
+    messages.add(CompletionMessage.assistant(content, name, functionCall, toolCalls))
   }
 
   fun tool(content: String, toolCallId: String) {
-    messages.add(CompletionMessage.Tool(content, toolCallId))
+    messages.add(CompletionMessage.tool(content, toolCallId))
   }
 
   @Deprecated("Deprecated in the Groq API", ReplaceWith("tool"))
   @Suppress("DEPRECATION")
   fun function(content: String, name: String) {
-    messages.add(CompletionMessage.Function(content, name))
+    messages.add(CompletionMessage.function(content, name))
   }
 }
 
@@ -494,8 +489,8 @@ sealed class CompletionMessage(val role: String) {
             is UserMessageType.Array -> {
               val contents =
                   mutableListOf<UserMessageContent>().apply {
-                    value.content.textContent.text?.let { add(value.content.textContent) }
-                    value.content.imageContent.image?.let { add(value.content.imageContent) }
+                    value.content.textContent?.text?.let { add(value.content.textContent) }
+                    value.content.imageContent?.image?.let { add(value.content.imageContent) }
                   }
 
               root.encodeSerializableElement(
@@ -530,20 +525,23 @@ sealed class CompletionMessage(val role: String) {
     }
 
     override fun deserialize(decoder: Decoder): CompletionMessage {
-      error("Unreachable")
+      error("unreachable")
     }
   }
 
   companion object {
     fun system(content: String, name: String? = null) = System(content, name)
 
-    fun text(content: String) = User(UserMessageType.Text(content))
+    fun text(content: String, name: String? = null) = User(UserMessageType.Text(content), name)
 
-    fun image(image: String) =
-        User(UserMessageType.Array(imageContent = Image(ImageObject(url = image))))
+    fun image(image: String, name: String? = null) =
+        User(UserMessageType.Array(imageContent = Image(ImageObject(url = image))), name)
 
-    fun user(content: String?, image: String?, name: String? = null) =
-        User(UserMessageType.Array(Text(content), Image(ImageObject(url = image))), name)
+    fun user(content: String?, image: String? = null, name: String? = null) =
+        User(
+            UserMessageType.Array(
+                content?.let { Text(it) }, image?.let { Image(ImageObject(url = it)) }),
+            name)
 
     fun assistant(
         content: String,
@@ -578,11 +576,11 @@ sealed class UserMessageType {
    */
   @Serializable
   data class Array(
-      val textContent: UserMessageContent.Text = Text(),
-      val imageContent: Image = Image()
+      val textContent: UserMessageContent.Text? = null,
+      val imageContent: Image? = null,
   ) : UserMessageType() {
     init {
-      require(textContent.type != null || imageContent.type != null) {
+      require(textContent?.text != null || imageContent?.image?.url != null) {
         "either textContent or imageContent must be specified"
       }
     }
