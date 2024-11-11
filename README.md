@@ -10,6 +10,7 @@
 - ⚡ Real-time streaming responses via Kotlin Flows
 - 🧩 Rich, idiomatic DSL for clean and expressive syntax
 - 🔒 Ensures required validations are met before request submission
+- 🔧 Allows specifying default values for API requests in client configuration
 - ⏳ Automatically handles rate limiting and retries on failed requests
 - 📱 Supports multiple platforms:
   - Android
@@ -48,6 +49,22 @@ val apiKey = process.env.GROQ_API_KEY             // JS
 val apiKey = getenv("GROQ_API_KEY")!!.toKString() // Native
 
 val client = Groq(apiKey)
+```
+
+### Specifying default values
+You can configure default values for requests. These values will be automatically applied to every request made with a DSL function.
+```kotlin
+val client = Groq(apiKey) {
+  defaults {
+    chatCompletion {
+      model = GroqModel.LLAMA_3_8B_8192
+    }
+    
+    audioTranscription {
+      format = AudioResponseFormat.VERBOSE_JSON
+    }
+  }
+}
 ```
 
 ### Chat completion
