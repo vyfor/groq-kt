@@ -190,7 +190,9 @@ data class ChatCompletionRequest(
     }
 
     fun messages(block: ChatCompletionMessageBuilder.() -> Unit) {
-      messages = ChatCompletionMessageBuilder().apply(block).messages
+      ChatCompletionMessageBuilder().apply(block).messages.apply {
+        messages?.addAll(this) ?: run { messages = this }
+      }
     }
 
     fun stops(vararg sequences: String) {
