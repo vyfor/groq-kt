@@ -30,7 +30,7 @@
 Add these dependencies to your project:
 ```kotlin
 dependencies {
-    implementation("io.github.vyfor:groq-kt:0.0.1")
+    implementation("io.github.vyfor:groq-kt:0.1.0")
     /* required */
     implementation("io.ktor:ktor-client-$engine:$version")
 }
