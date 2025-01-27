@@ -48,13 +48,13 @@ val apiKey = System.getenv("GROQ_API_KEY")        // JVM
 val apiKey = process.env.GROQ_API_KEY             // JS
 val apiKey = getenv("GROQ_API_KEY")!!.toKString() // Native
 
-val client = Groq(apiKey)
+val client = GroqClient(apiKey)
 ```
 
 ### Specifying default values
 You can configure default values for requests. These values will be automatically applied to every request made with a DSL function.
 ```kotlin
-val client = Groq(apiKey) {
+val client = GroqClient(apiKey) {
   defaults {
     chatCompletion {
       model = GroqModel.LLAMA_3_8B_8192
