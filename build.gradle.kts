@@ -63,7 +63,7 @@ kotlin {
         implementation("io.ktor:ktor-serialization-kotlinx-json:$ktorVersion")
       }
     }
-    val jvmTest by getting {
+    val commonTest by getting {
       dependencies {
         implementation(kotlin("test"))
         implementation("io.ktor:ktor-client-cio:$ktorVersion")

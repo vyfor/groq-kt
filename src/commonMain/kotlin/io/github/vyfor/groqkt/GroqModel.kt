@@ -3,9 +3,11 @@
 package io.github.vyfor.groqkt
 
 import kotlinx.serialization.Serializable
+import kotlin.jvm.JvmInline
 
+@JvmInline
 @Serializable
-data class GroqModel(
+value class GroqModel(
     val id: String,
 ) {
     companion object {
