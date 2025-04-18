@@ -28,10 +28,12 @@
 
 ## ⚙️ Installation
 
+![Maven Central Version](https://img.shields.io/maven-central/v/io.github.vyfor/groq-kt)
+
 Add these dependencies to your project:
 ```kotlin
 dependencies {
-    implementation("io.github.vyfor:groq-kt:0.1.0")
+    implementation("io.github.vyfor:groq-kt:$version")
     /* required */
     implementation("io.ktor:ktor-client-$engine:$version")
 }
@@ -82,7 +84,7 @@ val response = client.chat {
 ### Streaming
 ```kotlin
 val response = client.chatStreaming {
-    model = GroqModel.LLAMA_3_2_90B_VISION_PREVIEW
+    model = GroqModel("$VISION_MODEL")
 
     messages {
         user(
@@ -98,7 +100,7 @@ val response = client.chatStreaming {
 ### Audio transcription
 ```kotlin
 val response = client.transcribe {
-    model = GroqModel.DISTIL_WHISPER_LARGE_V3_EN
+    model = GroqModel("$TRANSCRIPTION_MODEL")
 
     file("path/to/audio.mp3")
     /* or */
@@ -111,7 +113,7 @@ val response = client.transcribe {
 > Does not seem to be supported by the API yet.
 ```kotlin
 val response = client.translate {
-    model = GroqModel.DISTIL_WHISPER_LARGE_V3_EN
+    model = GroqModel("$TRANSLATION_MODEL")
 
     file("path/to/audio.mp3")
     /* or */
