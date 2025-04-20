@@ -179,7 +179,7 @@ class GroqClient(
                 )
                 append("model", data.model!!.id)
                 data.prompt?.let { append("prompt", it) }
-                data.responseFormat?.let { append("response_format", it.name) }
+                data.responseFormat?.let { append("response_format", it.value) }
                 data.temperature?.let { append("temperature", it.toString()) }
               },
           ) {
@@ -214,7 +214,7 @@ class GroqClient(
                       )
                       append("model", data.model!!.id)
                       data.prompt?.let { append("prompt", it) }
-                      data.responseFormat?.let { append("response_format", it.name) }
+                      data.responseFormat?.let { append("response_format", it.value) }
                       data.temperature?.let { append("temperature", it.toString()) }
                     }
               },
@@ -248,7 +248,7 @@ class GroqClient(
                 append("model", data.model!!.id)
                 data.language?.let { append("language", it) }
                 data.prompt?.let { append("prompt", it) }
-                data.responseFormat?.let { append("response_format", it.name) }
+                data.responseFormat?.let { append("response_format", it.value) }
                 data.temperature?.let { append("temperature", it.toString()) }
                 data.timestampGranularities?.let {
                   append(
@@ -296,7 +296,7 @@ class GroqClient(
                       data.url?.let { append("url", it) }
                       data.language?.let { append("language", it) }
                       data.prompt?.let { append("prompt", it) }
-                      data.responseFormat?.let { append("response_format", it.name) }
+                      data.responseFormat?.let { append("response_format", it.value) }
                       data.temperature?.let { append("temperature", it.toString()) }
                       data.timestampGranularities?.let {
                         append(
